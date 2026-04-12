@@ -1,0 +1,10 @@
+# SQLite database (local data)
+database.db
+database.db-journal
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env

@@ -1,0 +1,62 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Autorun: Backend + Flutter",
+      "type": "shell",
+      "command": "bash scripts/autorun_app.sh",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/backend"
+        }
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Backend: Flask API (run_backend.sh)",
+      "type": "shell",
+      "command": "bash scripts/run_backend.sh",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/backend"
+        }
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "Backend: Flask API (foreground, skip pip)",
+      "type": "shell",
+      "command": "backend/.venv/bin/python -u backend/api/app.py",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/backend",
+          "ALLOW_HTTP_PRIVATE_LAN": "1",
+          "FLASK_SSL_ADHOC": "0"
+        }
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}

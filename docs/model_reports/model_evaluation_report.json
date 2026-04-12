@@ -1,0 +1,263 @@
+{
+  "timestamp": "2026-03-29T03:52:58.641467",
+  "data_summary": {
+    "total_samples": 1400,
+    "holdout_samples": 280,
+    "total_features": 30,
+    "feature_names": [
+      "delta_power_mean",
+      "theta_power_mean",
+      "alpha_power_mean",
+      "beta_power_mean",
+      "gamma_power_mean",
+      "low_alpha",
+      "high_alpha",
+      "smr",
+      "high_beta",
+      "frontal_asymmetry_index",
+      "mental_effort_score",
+      "signal_entropy",
+      "alpha_beta_ratio",
+      "theta_alpha_ratio",
+      "theta_beta_ratio",
+      "psd_mean",
+      "psd_std",
+      "psd_max",
+      "signal_mean",
+      "signal_std",
+      "signal_rms",
+      "pp_amplitude",
+      "hjorth_activity",
+      "hjorth_mobility",
+      "hjorth_complexity",
+      "petrosian_fd",
+      "spectral_edge_freq",
+      "zero_crossing_rate",
+      "pupil_dilation_avg",
+      "heart_rate_variability"
+    ],
+    "class_distribution": {
+      "Low": 200,
+      "Medium": 400,
+      "High": 800
+    }
+  },
+  "classification_model": {
+    "metrics": {
+      "accuracy": 0.925,
+      "precision": 0.9259146548600417,
+      "recall": 0.925,
+      "f1_score": 0.9253237345376791,
+      "classification_report": {
+        "0": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 45.0
+        },
+        "1": {
+          "precision": 0.8554216867469879,
+          "recall": 0.8875,
+          "f1-score": 0.8711656441717791,
+          "support": 80.0
+        },
+        "2": {
+          "precision": 0.9407894736842105,
+          "recall": 0.9225806451612903,
+          "f1-score": 0.9315960912052117,
+          "support": 155.0
+        },
+        "accuracy": 0.925,
+        "macro avg": {
+          "precision": 0.9320703868103996,
+          "recall": 0.9366935483870967,
+          "f1-score": 0.9342539117923302,
+          "support": 280.0
+        },
+        "weighted avg": {
+          "precision": 0.9259146548600417,
+          "recall": 0.925,
+          "f1-score": 0.9253237345376791,
+          "support": 280.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          45,
+          0,
+          0
+        ],
+        [
+          0,
+          71,
+          9
+        ],
+        [
+          0,
+          12,
+          143
+        ]
+      ],
+      "roc_auc": 0.9702357142857143
+    },
+    "cross_validation": {
+      "cv_folds": 5,
+      "metrics": {
+        "accuracy": {
+          "test_mean": 0.7150000000000001,
+          "test_std": 0.02012714686229338,
+          "train_mean": 0.9692857142857143,
+          "train_std": 0.008272310587071735,
+          "test_scores": [
+            0.725,
+            0.7464285714285714,
+            0.7071428571428572,
+            0.6857142857142857,
+            0.7107142857142857
+          ],
+          "train_scores": [
+            0.9544642857142858,
+            0.975,
+            0.9741071428571428,
+            0.9767857142857143,
+            0.9660714285714286
+          ]
+        },
+        "precision_weighted": {
+          "test_mean": 0.7046176560154003,
+          "test_std": 0.02170808079596876,
+          "train_mean": 0.9703667100476243,
+          "train_std": 0.007587334035438926,
+          "test_scores": [
+            0.719566462948816,
+            0.7364601981143335,
+            0.6928571428571428,
+            0.6735578639251802,
+            0.7006466122315287
+          ],
+          "train_scores": [
+            0.9568873400209134,
+            0.975787445968803,
+            0.9746949762624082,
+            0.9772850456756763,
+            0.9671787423103211
+          ]
+        },
+        "recall_weighted": {
+          "test_mean": 0.7150000000000001,
+          "test_std": 0.02012714686229338,
+          "train_mean": 0.9692857142857143,
+          "train_std": 0.008272310587071735,
+          "test_scores": [
+            0.725,
+            0.7464285714285714,
+            0.7071428571428572,
+            0.6857142857142857,
+            0.7107142857142857
+          ],
+          "train_scores": [
+            0.9544642857142858,
+            0.975,
+            0.9741071428571428,
+            0.9767857142857143,
+            0.9660714285714286
+          ]
+        },
+        "f1_weighted": {
+          "test_mean": 0.7078015749832439,
+          "test_std": 0.021247848291110878,
+          "train_mean": 0.9694937001965401,
+          "train_std": 0.008153968062567107,
+          "test_scores": [
+            0.7220339906307877,
+            0.7395806845622069,
+            0.6967967864867648,
+            0.6778274278510649,
+            0.7027689853853953
+          ],
+          "train_scores": [
+            0.954893329288406,
+            0.9751434761126524,
+            0.9742332134095087,
+            0.9768914800687002,
+            0.9663070021034336
+          ]
+        }
+      }
+    },
+    "feature_importance": {
+      "feature_importances": [
+        {
+          "rank": 1,
+          "feature": "petrosian_fd",
+          "importance": 0.4464816108837287,
+          "percentage": 44.64816108837287
+        },
+        {
+          "rank": 2,
+          "feature": "hjorth_activity",
+          "importance": 0.03292785772225332,
+          "percentage": 3.292785772225333
+        },
+        {
+          "rank": 3,
+          "feature": "pp_amplitude",
+          "importance": 0.03162825652633517,
+          "percentage": 3.162825652633518
+        },
+        {
+          "rank": 4,
+          "feature": "high_alpha",
+          "importance": 0.029375843606101015,
+          "percentage": 2.937584360610102
+        },
+        {
+          "rank": 5,
+          "feature": "delta_power_mean",
+          "importance": 0.028996053026494578,
+          "percentage": 2.899605302649458
+        },
+        {
+          "rank": 6,
+          "feature": "signal_mean",
+          "importance": 0.025161317914566935,
+          "percentage": 2.516131791456694
+        },
+        {
+          "rank": 7,
+          "feature": "hjorth_mobility",
+          "importance": 0.024855399514394638,
+          "percentage": 2.4855399514394643
+        },
+        {
+          "rank": 8,
+          "feature": "signal_entropy",
+          "importance": 0.023800628783269478,
+          "percentage": 2.380062878326948
+        },
+        {
+          "rank": 9,
+          "feature": "alpha_beta_ratio",
+          "importance": 0.023020848231941973,
+          "percentage": 2.3020848231941975
+        },
+        {
+          "rank": 10,
+          "feature": "alpha_power_mean",
+          "importance": 0.022825638072562836,
+          "percentage": 2.282563807256284
+        }
+      ],
+      "total_features": 30,
+      "top_n_features": 10
+    }
+  },
+  "regression_model": {
+    "metrics": {
+      "mae": 6.574353892765231e-05,
+      "mse": 1.004734057265486e-08,
+      "rmse": 0.00010023642338319369,
+      "r2": -0.7549548527062653
+    }
+  }
+}
