@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -68,10 +67,13 @@ class _EdfPreviewScreenState extends State<EdfPreviewScreen> {
         if (bytes == null) {
           throw Exception('Could not read selected file bytes. Try picking a local file.');
         }
-        final b64 = base64Encode(bytes);
         final api = ApiService();
 
-        final features = await api.analyzeEeg('preview', b64, ext: ext);
+        final features = await api.analyzeEegFile(
+          'preview',
+          bytes,
+          ext: ext,
+        );
 
         if (!mounted) return;
         setState(() {
