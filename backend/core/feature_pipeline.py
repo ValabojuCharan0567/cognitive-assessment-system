@@ -11,7 +11,7 @@ import logging
 import numpy as np
 import librosa
 import webrtcvad
-import soundfile as sf  # for debugging audio save
+import os
 
 
 # -------------------------------
@@ -36,7 +36,7 @@ from audio_features import (
     CANONICAL_AUDIO_SR,
     align_features_for_model,
     extract_features_from_bytes,
-    extract_features_from_path,
+    extract_features_from_signal,
     load_audio_consistent,
 )
 from eeg_features import extract_features_from_edf
@@ -433,39 +433,38 @@ def _generate_dynamic_confidence_hint(
 # 🎙️ ULTRA RELIABLE SPEECH DETECTION
 # -------------------------------
 def is_valid_speech(audio, sr):
-    rms = np.sqrt(np.mean(audio**2))
-    peak = np.max(np.abs(audio))
+    audio = np.asarray(audio, dtype=float).reshape(-1)
+    if audio.size == 0:
+        return False, "Empty audio"
 
-    print(f"[DEBUG] RMS={rms:.6f}, PEAK={peak:.6f}")
+    rms = float(np.sqrt(np.mean(audio**2)))
+    peak = float(np.max(np.abs(audio)))
 
-    # 🔥 Very relaxed thresholds
-    if rms < 0.0005 and peak < 0.002:
+    if os.getenv("AUDIO_DEBUG", "0").strip().lower() in {"1", "true", "yes"}:
+        logger.debug("[AUDIO] RMS=%.6f PEAK=%.6f", rms, peak)
+
+    # Very relaxed thresholds
+    if rms < MIN_RMS and peak < MIN_PEAK:
         return False, "Audio too silent"
 
-    # Normalize safely
-    if peak > 1e-6:
-        audio = audio / peak
-
-    # Frame energy
     frame_len = int(0.025 * sr)
     hop = int(0.01 * sr)
 
-    energies = [
-        np.sqrt(np.mean(audio[i:i+frame_len]**2))
-        for i in range(0, len(audio)-frame_len, hop)
-    ]
+    try:
+        frame_rms = librosa.feature.rms(y=audio, frame_length=frame_len, hop_length=hop).reshape(-1)
+    except Exception:
+        return False, "Failed to compute frame energy"
 
-    if len(energies) == 0:
+    if frame_rms.size == 0:
         return False, "Empty audio"
 
-    energies = np.array(energies)
+    threshold = float(np.mean(frame_rms)) * 1.2
+    speech_ratio = float(np.mean(frame_rms > threshold))
 
-    threshold = np.mean(energies) * 1.2
-    speech_ratio = np.sum(energies > threshold) / len(energies)
+    if os.getenv("AUDIO_DEBUG", "0").strip().lower() in {"1", "true", "yes"}:
+        logger.debug("[AUDIO] Speech ratio=%.3f", speech_ratio)
 
-    print(f"[DEBUG] Speech ratio={speech_ratio:.2f}")
-
-    if speech_ratio < 0.01:
+    if speech_ratio < MIN_SPEECH_RATIO:
         return False, "No speech pattern detected"
 
     return True, speech_ratio
@@ -495,10 +494,7 @@ def analyze_audio_payload(audio_b64: str, audio_ext: str = "") -> Dict[str, Any]
         # ====================================================================
         # 🎯 STEP 1: Load audio and basic checks
         # ====================================================================
-        audio, sr = librosa.load(tmp_path.as_posix(), sr=16000)
-
-        # Save debug file (optional)
-        sf.write("debug_audio.wav", audio, sr)
+        audio, sr = librosa.load(tmp_path.as_posix(), sr=16000, mono=True)
 
         # -------------------------------
         # 🔍 STEP 1: Basic amplitude checks
@@ -506,7 +502,8 @@ def analyze_audio_payload(audio_b64: str, audio_ext: str = "") -> Dict[str, Any]
         rms = np.sqrt(np.mean(audio ** 2))
         peak = np.max(np.abs(audio))
 
-        print(f"[DEBUG] RMS: {rms:.6f}, Peak: {peak:.6f}")
+        if os.getenv("AUDIO_DEBUG", "0").strip().lower() in {"1", "true", "yes"}:
+            logger.debug("[AUDIO] RMS=%.6f Peak=%.6f", float(rms), float(peak))
 
         if rms < MIN_RMS and peak < MIN_PEAK:
             try:
@@ -539,7 +536,8 @@ def analyze_audio_payload(audio_b64: str, audio_ext: str = "") -> Dict[str, Any]
             )
 
         try:
-            feats = extract_features_from_path(tmp_path)
+            # Avoid decoding twice: we already loaded `audio` above.
+            feats = extract_features_from_signal(audio, sr)
         except ValueError as exc:
             try:
                 tmp_path.unlink(missing_ok=True)

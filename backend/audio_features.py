@@ -304,6 +304,12 @@ def extract_features_from_bytes(raw: bytes) -> np.ndarray:
     return _extract_features_from_signal(y, sr)
 
 
+def extract_features_from_signal(y: np.ndarray, sr: int) -> np.ndarray:
+    """Extract runtime audio features from an already-decoded signal."""
+    y = np.asarray(y, dtype=np.float32)
+    return _extract_features_from_signal(y, int(sr or CANONICAL_AUDIO_SR))
+
+
 def extract_augmented_features_from_path(path: Path, noise_scale: float = 0.005) -> list[np.ndarray]:
     """Generate augmented feature variants from one audio file (noise, pitch, speed)."""
     y, sr = load_audio_consistent(path.as_posix())
