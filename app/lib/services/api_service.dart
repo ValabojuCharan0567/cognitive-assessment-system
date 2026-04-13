@@ -174,6 +174,7 @@ class ApiService {
     final url = Uri.parse("$baseUrl/audio/analyze");
     final base64Audio = base64Encode(bytes);
     final body = <String, dynamic>{
+      'child_id': childId,
       'audio_base64': base64Audio,
       'audio_ext': ext,
       'device_preprocessing': devicePreprocessing,
@@ -197,6 +198,7 @@ class ApiService {
     final uri = Uri.parse("$baseUrl/eeg/analyze");
 
     final req = http.MultipartRequest('POST', uri);
+    req.fields['child_id'] = childId;
     req.fields['eeg_ext'] = ext;
     if (devicePreprocessing != null) {
       req.fields['device_preprocessing'] = jsonEncode(devicePreprocessing);
