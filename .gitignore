@@ -40,11 +40,18 @@ android-native/build/
 
 # Local datasets / sample assets
 Dataset/
-# Ignore contents of data/ but keep data/README.md in version control
+# Production bundle: commit data/EEG/ and data/speech_data/ for Docker (keep under GitHub limits).
 data/*
 !data/README.md
+!data/EEG/
+!data/EEG/**
+!data/speech_data/
+!data/speech_data/**
 test_audio_samples/
 test_eeg_samples/
 test_eeg_samples_csv_backup/
+# Ignore EDF/WAV globally except under bundled data/ (for Render + full ML)
 *.edf
+!data/EEG/**/*.edf
 *.wav
+!data/speech_data/**/*.wav

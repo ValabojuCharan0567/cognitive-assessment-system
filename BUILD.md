@@ -126,7 +126,7 @@ Set these in Render / Railway / Docker / secrets. Values below are typical **pro
 | `FLASK_DEBUG` | Yes | Use **`0`** in production (no debugger / safer). |
 | `FLASK_SSL_ADHOC` | Yes | Use **`0`** in production; TLS is handled by the platform or reverse proxy. |
 | `GOOGLE_OAUTH_CLIENT_ID` | Yes if using Google login | **Web** OAuth client ID; backend uses it to verify Google `id_token` audience. |
-| `DATASET_PATH` | Yes for full ML | Filesystem path **inside** the container to dataset root (must contain `EEG/` and `speech_data/` for full mode). If missing, app may run **demo** mode — see backend config. |
+| `DATASET_PATH` | Yes for full ML | Path **inside** the container to dataset root (`EEG/`, `speech_data/`). **Dockerfile default:** `/workspace/data` (copied from repo `data/`). Override on Render only if you use another layout. |
 | `REQUIRE_HTTPS_UPLOADS` | Yes | Set **`1`** so non-local clients must use HTTPS for uploads. |
 | `ALLOW_HTTP_PRIVATE_LAN` | Yes | Set **`0`** on the public internet (do not treat RFC1918 LAN as exempt). |
 | `GUNICORN_WORKERS` | No | Default is fine; increase under load. |
@@ -186,6 +186,10 @@ Use this as the **final validation gate** before you call the rollout “done”
 - **Backend HTTPS gate:** `REQUIRE_HTTPS_UPLOADS=1` requires the server to see the request as HTTPS (platform TLS + `X-Forwarded-Proto`).
 
 ## Backend (Docker)
+
+### Bundled dataset (full ML on Render)
+
+The image includes **`COPY data /workspace/data`** and **`DATASET_PATH=/workspace/data`**. Commit your **`data/EEG/`** and **`data/speech_data/`** files under the [rules in `data/README.md`](data/README.md) (watch GitHub file size limits). For large corpora, use disk/LFS/storage instead.
 
 From the **repository root**:
 
