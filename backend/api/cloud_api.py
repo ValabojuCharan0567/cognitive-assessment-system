@@ -39,12 +39,12 @@ def cloud_ready():
                 "status": "ready",
                 "mode": "demo",
                 "dataset_exists": False,
-                "dataset_path": str(Path(os.getenv("DATASET_PATH", "/data/dataset"))),
+                "dataset_path": str(Path(os.getenv("DATASET_PATH", "/workspace/data"))),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
 
-    dataset_path = Path(os.getenv("DATASET_PATH", "/data/dataset"))
+    dataset_path = Path(os.getenv("DATASET_PATH", "/workspace/data"))
     checks = {
         "dataset_path": str(dataset_path),
         "dataset_exists": dataset_path.exists(),

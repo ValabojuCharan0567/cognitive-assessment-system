@@ -1,26 +1,26 @@
 # Project Guidelines
 
 ## Code Style
-- Keep backend changes Python 3.10+ compatible and consistent with existing Flask module style in `backend/app.py` and `backend/feature_pipeline.py`.
+- Keep backend changes Python 3.10+ compatible and consistent with existing Flask module style in `backend/api/app.py` and `backend/feature_pipeline.py`.
 - Prefer small, composable helpers over large route handlers; keep request validation and feature/model logic separated.
-- For Flutter (`neuro_ai_cognitive_app/lib`), preserve existing service + screen + engine split. Avoid moving business logic into UI widgets.
+- For Flutter (`app/lib/`), preserve existing service + screen + engine split. Avoid moving business logic into UI widgets.
 
 ## Architecture
 - Backend (`backend/`) is a Flask API with SQLite persistence and blueprint-based routing:
-  - `backend/app.py`: app bootstrap, auth/core endpoints, HTTPS enforcement.
-  - `backend/feature_api.py`, `backend/cloud_api.py`, `backend/reports_api.py`: modular API namespaces.
+  - `backend/api/app.py`: app bootstrap, auth/core endpoints, HTTPS enforcement.
+  - `backend/api/feature_api.py`, `backend/api/cloud_api.py`, `backend/api/reports_api.py`: API blueprints (plus thin `backend/feature_api.py` etc. re-exports for `PYTHONPATH=backend`).
   - `backend/feature_pipeline.py`: EEG/audio payload parsing and feature extraction.
   - `backend/ml_models.py`: cognitive scoring models and domain score logic.
   - `backend/database.py`: schema + lightweight migrations.
-- Mobile app (`neuro_ai_cognitive_app/`) is a Flutter client that calls backend APIs through `lib/services/api_service.dart` and runs game logic in `lib/engine/`.
+- Mobile app (`app/`) is a Flutter client that calls backend APIs through `app/lib/services/api_service.dart` and runs game logic in `app/lib/engine/`.
 - Trained artifacts live in `models/`; generated evaluation outputs live in `model_reports/`.
 
 ## Build And Run
 - Backend local setup/run (installs dependencies and starts Flask on port 8000):
-  - `./run_backend.sh`
+  - `bash scripts/run_backend.sh`
 - Full local dev launcher (backend + Flutter target):
-  - `./run_local_dev.sh`
-  - `./run_local_dev.sh android|ios|web|backend`
+  - `bash scripts/run_local_dev.sh`
+  - `bash scripts/run_local_dev.sh android|ios|web|backend`
 - EDF training and report pipeline:
   - `bash backend/run_all.sh [--preview path/to/file.edf]`
 - Individual training/evaluation scripts:
@@ -37,9 +37,9 @@
 - Confidence assessment includes "Uncertain" label for predictions with <40% top probability; provide clear user feedback for low-confidence results.
 
 ## Pitfalls
-- HTTPS upload enforcement is on by default (`REQUIRE_HTTPS_UPLOADS=1`); local mobile testing often needs `./run_local_dev.sh` (sets local-safe values) or explicit env overrides.
+- HTTPS upload enforcement is on by default (`REQUIRE_HTTPS_UPLOADS=1`); local mobile testing often needs `bash scripts/run_local_dev.sh` or explicit env overrides.
 - Model bundles are loaded in-process; after retraining, restart backend to ensure new artifacts are used.
-- `backend/run_all.sh` expects `.venv` at workspace root and dataset labels at `Dataset/EEG_EDF/labels.csv`.
+- `backend/run_all.sh` checks training layout under `DATASET_PATH` (e.g. `EEG_EDF/labels.csv`). The live API validates `EEG/` and `speech_data/` — see `data/README.md`. A gitignored `Dataset/` folder is optional local naming only.
 
 ## Docs
 - Security and deployment requirements: `secure_deployment.md`

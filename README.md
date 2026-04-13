@@ -125,21 +125,23 @@ Cognitive-Assessment-System/
 
 ## 📊 Dataset Setup
 
-The dataset is expected to live outside the project directory so the repo stays lightweight.
+See **[data/README.md](data/README.md)** for layout (`EEG/`, `speech_data/`), the repo **`data/`** bundle for Docker/Render, and the gitignored **`Dataset/`** convention.
 
-Default dataset path:
+**Local default** (large data usually outside the clone):
 
 ```bash
 $HOME/Datasets/CognitiveAssessment
 ```
 
-Override with environment variable:
+Override:
 
 ```bash
-export DATASET_PATH="/Users/yourname/Datasets/CognitiveAssessment"
+export DATASET_PATH="/path/to/folder/with/EEG/and/speech_data"
 ```
 
-The backend reads `DATASET_PATH` through `backend/config.py`.
+**Docker / Render:** `backend/Dockerfile` copies **`data/`** → `/workspace/data` and sets `DATASET_PATH`. That directory must exist in the repo for `docker build` to succeed.
+
+The backend reads `DATASET_PATH` through `backend/config/config.py`.
 
 ## 🐳 Docker
 
