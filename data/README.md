@@ -4,9 +4,13 @@ The backend expects **`DATASET_PATH`** to point at a directory that contains at 
 
 ```text
 <DATASET_PATH>/
-  EEG/ # required for full (non-demo) API startup validation
   speech_data/  # required for full (non-demo) API startup validation
+  EEG/  OR  EEG SIGNAL DATA/  # at least one; reference analytics use EEG SIGNAL DATA (see utils/eeg_reference.py)
 ```
+
+Use **`EEG/`** for the minimal Docker bundle under repo **`data/`**. A common local checkout uses root **`Dataset/`** with the research folder name **`EEG SIGNAL DATA/`** — set:
+
+`export DATASET_PATH="/Users/charanvalaboju/valaboju charan/Cognitive Assessment System/Dataset"`
 
 Optional (used by some **`ml/`** scripts, not by the live Flask `validate_dataset` check):
 

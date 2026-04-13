@@ -92,7 +92,10 @@ def _shutdown_handler(signum: int, _frame: Any) -> None:
 if DEMO_MODE:
     print("[INIT] Dataset not found; starting in DEMO MODE", flush=True)
 else:
-    validate_dataset(required_dirs=["EEG", "speech_data"])
+    validate_dataset(
+        required_dirs=["speech_data"],
+        required_any_of=["EEG", "EEG SIGNAL DATA"],
+    )
 print("Warming up models...", flush=True)
 warmup_models()
 print("Models ready", flush=True)

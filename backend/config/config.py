@@ -18,7 +18,10 @@ def get_dataset_subpath(*parts: str) -> Path:
     return dataset_subpath(*parts)
 
 
-def validate_dataset(required_dirs: list[str] | tuple[str, ...] | None = None) -> Path:
+def validate_dataset(
+    required_dirs: list[str] | tuple[str, ...] | None = None,
+    required_any_of: list[str] | tuple[str, ...] | None = None,
+) -> Path:
     dataset_path = DATASET_PATH.expanduser()
     if not str(dataset_path).strip():
         raise RuntimeError(
@@ -40,6 +43,13 @@ def validate_dataset(required_dirs: list[str] | tuple[str, ...] | None = None) -
         if missing:
             raise RuntimeError(
                 "Missing required dataset folders:\n" + "\n".join(missing)
+            )
+
+    if required_any_of:
+        if not any((dataset_path / name).is_dir() for name in required_any_of):
+            opts = ", ".join(required_any_of)
+            raise RuntimeError(
+                f"DATASET_PATH must contain at least one of these folders: {opts}"
             )
 
     print(f"Dataset validated at: {dataset_path}", flush=True)
