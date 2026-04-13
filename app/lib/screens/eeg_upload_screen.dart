@@ -58,7 +58,6 @@ Map<String, dynamic> _buildEegPayloadInBackground(Map<String, dynamic> args) {
   }
 
   return {
-    'eegBase64': base64Encode(bytes),
     'devicePreprocessing': devicePreprocessing,
   };
 }
@@ -165,13 +164,12 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
         'ext': ext,
         'name': name,
       });
-      final eegB64 = payload['eegBase64'] as String;
       final devicePreprocessing =
           (payload['devicePreprocessing'] as Map).cast<String, dynamic>();
       final api = ApiService();
-      final eegFeatures = await api.analyzeEeg(
+      final eegFeatures = await api.analyzeEegFile(
         childId,
-        eegB64,
+        bytes,
         ext: ext,
         devicePreprocessing: devicePreprocessing,
       );

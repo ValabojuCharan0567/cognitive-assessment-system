@@ -759,6 +759,11 @@ def analyze_audio_payload(audio_b64: str, audio_ext: str = "") -> Dict[str, Any]
 def extract_eeg_payload(eeg_b64: str, eeg_ext: str = "csv") -> Dict[str, float]:
     ext = str(eeg_ext or "csv").strip().lower()
     raw_bytes = base64.b64decode(eeg_b64)
+    return extract_eeg_payload_bytes(raw_bytes, ext)
+
+
+def extract_eeg_payload_bytes(raw_bytes: bytes, eeg_ext: str = "csv") -> Dict[str, float]:
+    ext = str(eeg_ext or "csv").strip().lower()
 
     if ext == "edf":
         tmp_path = create_temp_file(suffix=".edf")

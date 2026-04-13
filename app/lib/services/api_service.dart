@@ -188,25 +188,42 @@ class ApiService {
   }
 
   // Analyze EEG
-  Future<Map<String, dynamic>> analyzeEeg(
+  Future<Map<String, dynamic>> analyzeEegFile(
     String childId,
-    String eegB64, {
+    List<int> bytes, {
     required String ext,
     Map<String, dynamic>? devicePreprocessing,
   }) async {
-    final url = Uri.parse("$baseUrl/eeg/analyze");
-    final body = <String, dynamic>{
-      'eeg_base64': eegB64,
-      'eeg_ext': ext,
-      'device_preprocessing': devicePreprocessing,
-    };
-    final response = await _postJsonLong(url, body);
+    final uri = Uri.parse("$baseUrl/eeg/analyze");
+
+    final req = http.MultipartRequest('POST', uri);
+    req.fields['eeg_ext'] = ext;
+    if (devicePreprocessing != null) {
+      req.fields['device_preprocessing'] = jsonEncode(devicePreprocessing);
+    }
+    req.files.add(
+      http.MultipartFile.fromBytes(
+        'eeg',
+        bytes,
+        filename: 'upload.$ext',
+      ),
+    );
+
+    final streamed = await req.send().timeout(
+      _heavyRequestTimeout,
+      onTimeout: () {
+        throw Exception(
+          'Request timed out after ${_heavyRequestTimeout.inMinutes} minutes. '
+          'Try a shorter recording or retry if the host was cold-starting.',
+        );
+      },
+    );
+    final response = await http.Response.fromStream(streamed);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return Map<String, dynamic>.from(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to analyze EEG: ${response.body}');
     }
+    throw Exception('Failed to analyze EEG: ${response.body}');
   }
 
   // Get children for parent

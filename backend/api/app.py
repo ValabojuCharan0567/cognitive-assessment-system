@@ -36,7 +36,7 @@ from config import DEMO_MODE, validate_dataset
 from database import get_db, init_db
 from ml_models import HybridAnalyticsEngine
 from model_loader import warmup_models
-from feature_pipeline import AudioValidationError, analyze_audio_payload, analyze_behavioral_payload, extract_eeg_payload
+from feature_pipeline import AudioValidationError, analyze_audio_payload, analyze_behavioral_payload, extract_eeg_payload, extract_eeg_payload_bytes
 from feature_api import features_bp
 from cloud_api import cloud_bp
 from reports_api import reports_bp
@@ -173,6 +173,26 @@ def _extract_audio_input(data: dict) -> tuple[str | None, str]:
             audio_ext = suffix
 
     return audio_b64, audio_ext
+
+
+def _extract_eeg_input(data: dict) -> tuple[str | None, bytes | None, str]:
+    """Return (eeg_base64, eeg_bytes, eeg_ext). Supports JSON base64 and multipart file upload."""
+    eeg_b64 = data.get("eeg_base64")
+    eeg_ext = str(data.get("eeg_ext") or "csv").strip().lower()
+
+    uploaded = request.files.get("eeg")
+    if (not eeg_b64 or not str(eeg_b64).strip()) and uploaded is not None:
+        raw = uploaded.read()
+        if raw:
+            suffix = Path(uploaded.filename or "").suffix.lstrip(".").lower()
+            if suffix:
+                eeg_ext = suffix
+            return None, raw, eeg_ext
+
+    if eeg_b64 and str(eeg_b64).strip():
+        return str(eeg_b64), None, eeg_ext
+
+    return None, None, eeg_ext
 
 
 # Paths that never carry multimodal uploads; allow HTTP for phone/emulator dev.
@@ -1593,14 +1613,16 @@ def audio_analyze():
 def eeg_extract_features():
     """Extract EEG features from uploaded CSV or EDF (base64)."""
     data = _get_request_data()
-    eeg_b64 = data.get("eeg_base64")
-    eeg_ext = str(data.get("eeg_ext", "csv")).strip().lower()
+    eeg_b64, eeg_bytes, eeg_ext = _extract_eeg_input(data)
     device_preprocessing = _coerce_optional_dict(data.get("device_preprocessing"))
-    if not eeg_b64 or not eeg_b64.strip():
+    if (not eeg_b64 or not str(eeg_b64).strip()) and not eeg_bytes:
         return jsonify({"error": "eeg_base64 required and cannot be empty"}), 400
 
     try:
-        feats = extract_eeg_payload(eeg_b64, eeg_ext)
+        if eeg_bytes:
+            feats = extract_eeg_payload_bytes(eeg_bytes, eeg_ext)
+        else:
+            feats = extract_eeg_payload(str(eeg_b64), eeg_ext)
         if isinstance(device_preprocessing, dict):
             feats["device_preprocessing"] = device_preprocessing
         return jsonify(feats)
