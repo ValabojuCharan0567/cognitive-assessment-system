@@ -13,6 +13,7 @@ import ssl
 import sys
 import math
 import statistics
+import traceback
 from urllib import request as urllib_request
 from urllib import error as urllib_error
 from datetime import datetime, timedelta
@@ -1583,9 +1584,11 @@ def submit_assessment():
 
 @app.route("/api/audio/analyze", methods=["POST"])
 def audio_analyze():
+    request_id = (request.headers.get("X-Request-ID") or "unknown").strip() or "unknown"
     data = _get_request_data()
     audio_b64, audio_ext = _extract_audio_input(data)
     device_preprocessing = _coerce_optional_dict(data.get("device_preprocessing"))
+    child_id = str(data.get("child_id") or "").strip()
     if not audio_b64 or not audio_b64.strip():
         return jsonify({"error": "audio_base64 required and cannot be empty"}), 400
 
@@ -1593,6 +1596,9 @@ def audio_analyze():
         result = analyze_audio_payload(audio_b64, audio_ext)
         if isinstance(device_preprocessing, dict):
             result["device_preprocessing"] = device_preprocessing
+        result["request_id"] = request_id
+        if child_id:
+            result["child_id"] = child_id
         return jsonify(result)
     except AudioValidationError as exc:
         message = str(exc)
@@ -1601,10 +1607,23 @@ def audio_analyze():
                 "error": message,
                 "valid": False,
                 "silence_detected": "no speech" in message.lower(),
+                "request_id": request_id,
+                **({"child_id": child_id} if child_id else {}),
             }
         ), 400
     except Exception as exc:
-        return jsonify({"error": f"audio analysis failed: {exc}"}), 500
+        print(
+            f"[REQ {request_id}] audio analysis failed child_id={child_id}: {exc}\n"
+            f"{traceback.format_exc()}",
+            flush=True,
+        )
+        return jsonify(
+            {
+                "error": f"audio analysis failed: {exc}",
+                "request_id": request_id,
+                **({"child_id": child_id} if child_id else {}),
+            }
+        ), 500
 
 
 @app.route("/api/eeg/analyze", methods=["POST"])
@@ -1612,9 +1631,11 @@ def audio_analyze():
 @app.route("/api/eeg/extract_features", methods=["POST"])
 def eeg_extract_features():
     """Extract EEG features from uploaded CSV or EDF (base64)."""
+    request_id = (request.headers.get("X-Request-ID") or "unknown").strip() or "unknown"
     data = _get_request_data()
     eeg_b64, eeg_bytes, eeg_ext = _extract_eeg_input(data)
     device_preprocessing = _coerce_optional_dict(data.get("device_preprocessing"))
+    child_id = str(data.get("child_id") or "").strip()
     if (not eeg_b64 or not str(eeg_b64).strip()) and not eeg_bytes:
         return jsonify({"error": "eeg_base64 required and cannot be empty"}), 400
 
@@ -1625,9 +1646,23 @@ def eeg_extract_features():
             feats = extract_eeg_payload(str(eeg_b64), eeg_ext)
         if isinstance(device_preprocessing, dict):
             feats["device_preprocessing"] = device_preprocessing
+        feats["request_id"] = request_id
+        if child_id:
+            feats["child_id"] = child_id
         return jsonify(feats)
     except Exception as exc:  # pragma: no cover - defensive
-        return jsonify({"error": f"EEG feature extraction failed: {exc}"}), 500
+        print(
+            f"[REQ {request_id}] EEG feature extraction failed child_id={child_id}: {exc}\n"
+            f"{traceback.format_exc()}",
+            flush=True,
+        )
+        return jsonify(
+            {
+                "error": f"EEG feature extraction failed: {exc}",
+                "request_id": request_id,
+                **({"child_id": child_id} if child_id else {}),
+            }
+        ), 500
 
 
 @app.route("/api/progress/<child_id>", methods=["GET"])

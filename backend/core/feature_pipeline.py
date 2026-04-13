@@ -20,6 +20,7 @@ import os
 MIN_RMS = 0.0005         # very relaxed minimum loudness
 MIN_PEAK = 0.002         # very relaxed minimum peak
 MIN_SPEECH_RATIO = 0.01  # very relaxed: 1% frames must contain speech
+AUDIO_MAX_SECONDS = float(os.getenv("AUDIO_MAX_SECONDS", "8") or 8.0)
 
 # DEBUG: Temporarily disable VAD for testing (set to True to bypass)
 DISABLE_VAD_FOR_DEBUG = False
@@ -495,6 +496,10 @@ def analyze_audio_payload(audio_b64: str, audio_ext: str = "") -> Dict[str, Any]
         # 🎯 STEP 1: Load audio and basic checks
         # ====================================================================
         audio, sr = librosa.load(tmp_path.as_posix(), sr=16000, mono=True)
+        if AUDIO_MAX_SECONDS > 0:
+            max_samples = int(sr * AUDIO_MAX_SECONDS)
+            if audio.size > max_samples:
+                audio = audio[:max_samples]
 
         # -------------------------------
         # 🔍 STEP 1: Basic amplitude checks
@@ -764,6 +769,8 @@ def extract_eeg_payload(eeg_b64: str, eeg_ext: str = "csv") -> Dict[str, float]:
 
 def extract_eeg_payload_bytes(raw_bytes: bytes, eeg_ext: str = "csv") -> Dict[str, float]:
     ext = str(eeg_ext or "csv").strip().lower()
+    if not raw_bytes:
+        raise ValueError("EEG payload is empty.")
 
     if ext == "edf":
         tmp_path = create_temp_file(suffix=".edf")
