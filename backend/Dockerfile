@@ -21,4 +21,5 @@ COPY models /workspace/models
 
 EXPOSE 8000
 
-CMD ["gunicorn", "--config", "backend/gunicorn.conf.py", "--chdir", "backend", "app:app"]
+# Flask app lives in backend/api/app.py → module api.app, variable app
+CMD ["gunicorn", "--config", "backend/gunicorn.conf.py", "--chdir", "backend", "api.app:app"]

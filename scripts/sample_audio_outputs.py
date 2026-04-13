@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
 """
-Sample Audio Analysis Output Generator
-Shows example fluency scores and confidence values for testing
+Sample audio analysis output generator for manual testing (not used by the app).
+Run: python scripts/sample_audio_outputs.py
 """
 
-import random
 import json
-from typing import Dict, Any
+import random
+from typing import Any, Dict
+
 
 def generate_sample_audio_analysis() -> Dict[str, Any]:
-    """Generate a sample audio analysis result with random but realistic values"""
+    """Generate a sample audio analysis result with random but realistic values."""
 
-    # Random fluency score (30-90 scale, as per model)
     fluency_score_raw = random.uniform(30.0, 90.0)
-
-    # Normalized score (0-100 scale)
     fluency_score_normalized = (fluency_score_raw - 30.0) / 60.0 * 100.0
 
-    # Fluency labels based on score ranges
     if fluency_score_raw >= 70.0:
         label = "High Fluency"
     elif fluency_score_raw >= 50.0:
@@ -25,11 +22,9 @@ def generate_sample_audio_analysis() -> Dict[str, Any]:
     else:
         label = "Low Fluency"
 
-    # Confidence metrics
-    confidence = random.uniform(0.4, 0.95)  # Top probability
-    confidence_entropy = random.uniform(20.0, 80.0)  # Distribution-aware confidence
+    confidence = random.uniform(0.4, 0.95)
+    confidence_entropy = random.uniform(20.0, 80.0)
 
-    # Confidence label
     if confidence_entropy >= 60.0:
         confidence_label = "High Confidence"
     elif confidence_entropy >= 40.0:
@@ -37,16 +32,14 @@ def generate_sample_audio_analysis() -> Dict[str, Any]:
     else:
         confidence_label = "Low Confidence"
 
-    # Breakdown metrics
     speed_score = random.uniform(30.0, 90.0)
     clarity_score = random.uniform(30.0, 90.0)
 
-    # Probabilities for 3 classes (Low/Medium/High)
     probs = [random.random() for _ in range(3)]
     total = sum(probs)
-    probs = [p/total for p in probs]  # Normalize
+    probs = [p / total for p in probs]
 
-    result = {
+    return {
         "fluency_score": round(fluency_score_normalized, 1),
         "fluency_score_raw": round(fluency_score_raw, 1),
         "fluency_label": label,
@@ -72,29 +65,27 @@ def generate_sample_audio_analysis() -> Dict[str, Any]:
         "silence_detected": False,
     }
 
-    return result
 
-def main():
-    print("🎤 Sample Audio Analysis Results")
+def main() -> None:
+    print("Sample Audio Analysis Results")
     print("=" * 50)
 
     for i in range(5):
-        print(f"\n📊 Sample Analysis #{i+1}")
+        print(f"\nSample Analysis #{i + 1}")
         print("-" * 30)
         result = generate_sample_audio_analysis()
 
         print(f"Fluency Score: {result['fluency_score']}/100 ({result['fluency_label']})")
         print(f"Raw Score: {result['fluency_score_raw']}/90")
         print(f"Confidence: {result['confidence_label']} ({result['confidence_entropy']}/100)")
-        print(f"Breakdown:")
+        print("Breakdown:")
         print(f"  - Speed: {result['breakdown']['speed']}")
         print(f"  - Clarity: {result['breakdown']['clarity']}")
         print(f"Probabilities: {result['probabilities']}")
-
-        # Show JSON format
-        print(f"\n📝 JSON Response:")
+        print("\nJSON Response:")
         print(json.dumps(result, indent=2))
         print()
+
 
 if __name__ == "__main__":
     main()

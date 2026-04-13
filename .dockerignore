@@ -1,5 +1,9 @@
 .git
 .github
+app/android/build/
+app/android/app/build/
+app/build/
+app/.dart_tool/
 __pycache__/
 *.pyc
 *.pyo

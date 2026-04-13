@@ -10,9 +10,9 @@ class StroopGameScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Stroop Test")),
-      body: Padding(
+      body: const Padding(
         padding: AppDesign.pagePadding,
-        child: const Center(
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

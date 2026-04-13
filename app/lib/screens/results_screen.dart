@@ -1755,7 +1755,7 @@ class _BrainWavePainter extends CustomPainter {
         }
       }
       if (size.width > 0) {
-        final normalized = 1.0;
+        const normalized = 1.0;
         final y = baseY +
             math.sin((normalized * math.pi * 2 * frequency) + phase) * amplitude +
             math.sin((normalized * math.pi * 2 * (frequency * 2.2)) + phase) * 3;

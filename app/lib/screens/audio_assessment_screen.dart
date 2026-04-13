@@ -169,7 +169,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
   bool _loading = false;
   String? _error;
   bool _isRecording = false;
-  bool _audioPlayedSinceLastRecord = false;
   Uint8List? _audioBytes;
   String? _audioFileName;
   String? _audioExt;

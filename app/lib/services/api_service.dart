@@ -3,11 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // 🔥 IMPORTANT: Uses dart-define
-  final String baseUrl = String.fromEnvironment(
+  /// Override with `--dart-define=API_BASE_URL=https://host/api`
+  static const String _kBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.31.159:8000/api',
+    defaultValue: 'http://127.0.0.1:8000/api',
   );
+
+  String get baseUrl => _kBaseUrl;
 
   // Example endpoint
   String get healthUrl => "$baseUrl/cloud/health";

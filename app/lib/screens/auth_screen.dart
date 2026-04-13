@@ -46,23 +46,46 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   /// Restore saved session when possible; otherwise show sign-in.
+  ///
+  /// After a server DB reset, a local email alone is not enough — the parent row
+  /// must exist on the API. We use Google silent sign-in + [loginWithGoogle] so
+  /// `/api/login/google` runs and upserts the user before opening the dashboard.
   Future<void> _bootstrapAuth() async {
     try {
       final session = await _session.readUserSession();
-      final email = session['email']?.trim() ?? '';
-      if (!mounted) return;
-      if (email.isNotEmpty) {
-        Navigator.pushReplacementNamed(
-          context,
-          DashboardScreen.routeName,
-          arguments: email,
-        );
+      final savedEmail = session['email']?.trim() ?? '';
+      if (savedEmail.isEmpty) {
+        if (mounted) setState(() => _restoringSession = false);
         return;
       }
+
+      final account = await _googleSignIn.signInSilently();
+      if (account == null) {
+        await _session.clearSession();
+        if (mounted) setState(() => _restoringSession = false);
+        return;
+      }
+
+      final auth = await account.authentication;
+      await _api.loginWithGoogle(
+        idToken: auth.idToken,
+        accessToken: auth.accessToken,
+      );
+      await _session.saveUserSession(
+        email: account.email,
+        displayName: account.displayName,
+      );
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(
+        context,
+        DashboardScreen.routeName,
+        arguments: account.email,
+      );
     } catch (e) {
       debugPrint('[AUTH] Session restore failed: $e');
+      await _session.clearSession();
+      if (mounted) setState(() => _restoringSession = false);
     }
-    if (mounted) setState(() => _restoringSession = false);
   }
 
   /// Clear local session and Google cache so the next sign-in is a clean choice.

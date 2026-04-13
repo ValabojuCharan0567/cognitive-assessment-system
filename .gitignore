@@ -27,6 +27,8 @@ app/build/
 app/.idea/
 app/android/.gradle/
 app/android/.kotlin/
+app/android/build/
+app/android/app/build/
 app/ios/Pods/
 app/ios/.symlinks/
 app/macos/Pods/
