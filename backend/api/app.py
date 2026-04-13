@@ -14,6 +14,8 @@ import sys
 import math
 import statistics
 import traceback
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from urllib import request as urllib_request
 from urllib import error as urllib_error
 from datetime import datetime, timedelta
@@ -69,6 +71,9 @@ app.register_blueprint(cloud_bp)
 app.register_blueprint(reports_bp)
 
 _SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+ASSESSMENT_ANALYSIS_TIMEOUT_SEC = float(
+    os.getenv("ASSESSMENT_ANALYSIS_TIMEOUT_SEC", "15") or 15.0
+)
 
 
 def _should_run_startup_init() -> bool:
@@ -88,6 +93,10 @@ def _initialize_runtime() -> None:
 def _shutdown_handler(signum: int, _frame: Any) -> None:
     print(f"[SHUTDOWN] Received signal {signum}; exiting gracefully.", flush=True)
     sys.exit(0)
+
+
+def _request_id() -> str:
+    return (request.headers.get("X-Request-ID") or "unknown").strip() or "unknown"
 
 
 if DEMO_MODE:
@@ -231,6 +240,19 @@ def enforce_https_uploads() -> Any:
         return jsonify({"error": "HTTPS is required for secure upload."}), 426
 
     return None
+
+
+@app.route("/health", methods=["GET"])
+@app.route("/ready", methods=["GET"])
+def service_health():
+    return jsonify(
+        {
+            "status": "ok",
+            "service": "cognitive-assessment-backend",
+            "models_warmed": True,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    )
 
 
 # Game library for report recommendations.
@@ -1005,6 +1027,9 @@ def start_assessment():
 
 @app.route("/api/assessment/submit", methods=["POST"])
 def submit_assessment():
+    request_id = _request_id()
+    started_at = time.perf_counter()
+    print(f"[REQ {request_id}] assessment submit received", flush=True)
     data = request.get_json(force=True)
     asm_id_str = data.get("assessment_id")
     if not asm_id_str:
@@ -1103,15 +1128,33 @@ def submit_assessment():
     # -----------------------------------------------------------------------
     # Adaptive scoring (research-style improvements)
     # -----------------------------------------------------------------------
-    # 2) Behavioral scoring (requested formula)
-    behavioral_result = analyze_behavioral_payload(
-        behavioral,
-        fallback_scores={
-            "memory": memory,
-            "attention": attention,
-            "language": language,
-        },
-    )
+    # 2) Behavioral scoring and EEG model scoring are independent after domain scoring.
+    # Execute them in parallel and bound with a timeout to avoid hung requests.
+    fallback_scores = {
+        "memory": memory,
+        "attention": attention,
+        "language": language,
+    }
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            behavioral_future = executor.submit(
+                analyze_behavioral_payload,
+                behavioral,
+                fallback_scores=fallback_scores,
+            )
+            eeg_future = executor.submit(engine.eeg_model.predict_load_and_effort, eeg)
+            behavioral_result = behavioral_future.result(
+                timeout=ASSESSMENT_ANALYSIS_TIMEOUT_SEC
+            )
+            eeg_result = eeg_future.result(timeout=ASSESSMENT_ANALYSIS_TIMEOUT_SEC)
+    except FuturesTimeoutError:
+        return jsonify(
+            {
+                "error": "Assessment processing timed out. Please retry.",
+                "request_id": request_id,
+            }
+        ), 504
+
     accuracy = float(behavioral_result["accuracy"])
     reaction_time = float(behavioral_result["reaction_time_ms"])
     rt_score = float(behavioral_result["rt_score"])
@@ -1121,7 +1164,6 @@ def submit_assessment():
     behavioral_score = float(behavioral_result["behavioral_score"])
 
     # EEG score: always use the trained EEG model on the extracted features.
-    eeg_result = engine.eeg_model.predict_load_and_effort(eeg)
     ml_effort = float(eeg_result.get("effort", 0.5))
     ml_load_level = eeg_result.get("load_level")
 
@@ -1502,6 +1544,11 @@ def submit_assessment():
         except Exception:
             eeg_reference = None
 
+    duration_ms = int((time.perf_counter() - started_at) * 1000)
+    print(
+        f"[REQ {request_id}] assessment submit completed in {duration_ms}ms",
+        flush=True,
+    )
     return jsonify(
         {
             "scores": {
@@ -1578,17 +1625,24 @@ def submit_assessment():
             "comparison": comparison,
             "trends": trends or {},
             "deltas": deltas or {},
+            "request_id": request_id,
+            "duration_ms": duration_ms,
         }
     )
 
 
 @app.route("/api/audio/analyze", methods=["POST"])
 def audio_analyze():
-    request_id = (request.headers.get("X-Request-ID") or "unknown").strip() or "unknown"
+    request_id = _request_id()
+    started_at = time.perf_counter()
     data = _get_request_data()
     audio_b64, audio_ext = _extract_audio_input(data)
     device_preprocessing = _coerce_optional_dict(data.get("device_preprocessing"))
     child_id = str(data.get("child_id") or "").strip()
+    print(
+        f"[REQ {request_id}] audio analyze received child_id={child_id or 'unknown'} ext={audio_ext or 'unknown'}",
+        flush=True,
+    )
     if not audio_b64 or not audio_b64.strip():
         return jsonify({"error": "audio_base64 required and cannot be empty"}), 400
 
@@ -1599,6 +1653,9 @@ def audio_analyze():
         result["request_id"] = request_id
         if child_id:
             result["child_id"] = child_id
+        duration_ms = int((time.perf_counter() - started_at) * 1000)
+        result["duration_ms"] = duration_ms
+        print(f"[REQ {request_id}] audio analyze completed in {duration_ms}ms", flush=True)
         return jsonify(result)
     except AudioValidationError as exc:
         message = str(exc)
@@ -1631,11 +1688,16 @@ def audio_analyze():
 @app.route("/api/eeg/extract_features", methods=["POST"])
 def eeg_extract_features():
     """Extract EEG features from uploaded CSV or EDF (base64)."""
-    request_id = (request.headers.get("X-Request-ID") or "unknown").strip() or "unknown"
+    request_id = _request_id()
+    started_at = time.perf_counter()
     data = _get_request_data()
     eeg_b64, eeg_bytes, eeg_ext = _extract_eeg_input(data)
     device_preprocessing = _coerce_optional_dict(data.get("device_preprocessing"))
     child_id = str(data.get("child_id") or "").strip()
+    print(
+        f"[REQ {request_id}] eeg extract received child_id={child_id or 'unknown'} ext={eeg_ext or 'unknown'}",
+        flush=True,
+    )
     if (not eeg_b64 or not str(eeg_b64).strip()) and not eeg_bytes:
         return jsonify({"error": "eeg_base64 required and cannot be empty"}), 400
 
@@ -1649,6 +1711,9 @@ def eeg_extract_features():
         feats["request_id"] = request_id
         if child_id:
             feats["child_id"] = child_id
+        duration_ms = int((time.perf_counter() - started_at) * 1000)
+        feats["duration_ms"] = duration_ms
+        print(f"[REQ {request_id}] eeg extract completed in {duration_ms}ms", flush=True)
         return jsonify(feats)
     except Exception as exc:  # pragma: no cover - defensive
         print(
