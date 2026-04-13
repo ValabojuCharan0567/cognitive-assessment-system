@@ -4,6 +4,7 @@ import base64
 import csv
 import io
 import math
+import time
 from pathlib import Path
 from typing import Dict, Any
 import logging
@@ -20,7 +21,8 @@ import os
 MIN_RMS = 0.0005         # very relaxed minimum loudness
 MIN_PEAK = 0.002         # very relaxed minimum peak
 MIN_SPEECH_RATIO = 0.01  # very relaxed: 1% frames must contain speech
-AUDIO_MAX_SECONDS = float(os.getenv("AUDIO_MAX_SECONDS", "8") or 8.0)
+# Keep inference window short to control backend latency on mobile uploads.
+AUDIO_MAX_SECONDS = float(os.getenv("AUDIO_MAX_SECONDS", "4") or 4.0)
 
 # DEBUG: Temporarily disable VAD for testing (set to True to bypass)
 DISABLE_VAD_FOR_DEBUG = False
@@ -472,6 +474,7 @@ def is_valid_speech(audio, sr):
 
 
 def analyze_audio_payload(audio_b64: str, audio_ext: str = "") -> Dict[str, Any]:
+    started_at = time.perf_counter()
     allowed_exts = {"wav", "mp3", "m4a", "webm"}
     ext = (audio_ext or "").strip().lower()
     logger.debug("analyze_audio_payload called with ext='%s' (original: '%s')", ext, audio_ext)
@@ -491,15 +494,18 @@ def analyze_audio_payload(audio_b64: str, audio_ext: str = "") -> Dict[str, Any]
         tmp_path = create_temp_file(suffix=f".{ext}")
         with open(tmp_path, "wb") as f:
             f.write(raw)
+        logger.debug("[AUDIO STEP] decode+write took %.1fms", (time.perf_counter() - started_at) * 1000.0)
 
         # ====================================================================
         # 🎯 STEP 1: Load audio and basic checks
         # ====================================================================
-        audio, sr = librosa.load(tmp_path.as_posix(), sr=16000, mono=True)
+        audio, sr = load_audio_consistent(tmp_path.as_posix())
+        logger.debug("[AUDIO STEP] load audio took %.1fms", (time.perf_counter() - started_at) * 1000.0)
         if AUDIO_MAX_SECONDS > 0:
             max_samples = int(sr * AUDIO_MAX_SECONDS)
             if audio.size > max_samples:
                 audio = audio[:max_samples]
+        logger.debug("[AUDIO STEP] trimmed samples=%d sr=%d", int(audio.size), int(sr))
 
         # -------------------------------
         # 🔍 STEP 1: Basic amplitude checks
@@ -543,6 +549,7 @@ def analyze_audio_payload(audio_b64: str, audio_ext: str = "") -> Dict[str, Any]
         try:
             # Avoid decoding twice: we already loaded `audio` above.
             feats = extract_features_from_signal(audio, sr)
+            logger.debug("[AUDIO STEP] feature extraction took %.1fms", (time.perf_counter() - started_at) * 1000.0)
         except ValueError as exc:
             try:
                 tmp_path.unlink(missing_ok=True)
@@ -571,6 +578,7 @@ def analyze_audio_payload(audio_b64: str, audio_ext: str = "") -> Dict[str, Any]
     
     X = scaler.transform([feats_aligned])
     cls = int(model.predict(X)[0])
+    logger.debug("[AUDIO STEP] model inference took %.1fms", (time.perf_counter() - started_at) * 1000.0)
     
     # ========================================================================
     # Extract breakdown metrics from raw features (for speed, clarity scores)
@@ -758,6 +766,7 @@ def analyze_audio_payload(audio_b64: str, audio_ext: str = "") -> Dict[str, Any]
     if warning is not None:
         result["warning"] = warning
 
+    logger.debug("[AUDIO STEP] total analyze_audio_payload %.1fms", (time.perf_counter() - started_at) * 1000.0)
     return result
 
 
