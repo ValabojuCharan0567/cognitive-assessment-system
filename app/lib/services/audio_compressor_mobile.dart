@@ -20,16 +20,6 @@ Future<CompressedAudioPayload> compressForUpload(
   try {
     await inputFile.writeAsBytes(bytes, flush: true);
 
-    // If the source is WAV, send as WAV directly to avoid extra lossy conversion
-    // and reduce risk of silent/failed re-encoding with FFmpeg on emulator/device.
-    if (normalizedExt == 'wav') {
-      return CompressedAudioPayload(
-        bytes: bytes,
-        ext: 'wav',
-        wasCompressed: false,
-      );
-    }
-
     final session = await FFmpegKit.execute(
       '-y -i ${_quote(inputPath)} '
       '-vn -ac 1 -ar 16000 -b:a 64k -c:a aac '

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -11,6 +12,7 @@ class ApiService {
 
   /// Large JSON + ML on the server (e.g. `/audio/analyze`) can take minutes.
   static const Duration _heavyRequestTimeout = Duration(seconds: 300);
+  final Dio _dio = Dio();
 
   String get baseUrl => _kBaseUrl;
 
@@ -171,21 +173,34 @@ class ApiService {
     dynamic cancelToken,
     Function(int, int)? onSendProgress,
   }) async {
-    final url = Uri.parse("$baseUrl/audio/analyze");
-    final base64Audio = base64Encode(bytes);
-    final body = <String, dynamic>{
+    final url = '$baseUrl/audio/analyze';
+    final formData = FormData.fromMap({
       'child_id': childId,
-      'audio_base64': base64Audio,
       'audio_ext': ext,
-      'device_preprocessing': devicePreprocessing,
-    };
-    final response = await _postJsonLong(url, body);
+      if (devicePreprocessing != null)
+        'device_preprocessing': jsonEncode(devicePreprocessing),
+      'audio': MultipartFile.fromBytes(bytes, filename: 'upload.$ext'),
+    });
+
+    final response = await _dio.post(
+      url,
+      data: formData,
+      cancelToken: cancelToken is CancelToken ? cancelToken : null,
+      onSendProgress: onSendProgress,
+      options: Options(
+        headers: {
+          if (requestId != null && requestId.trim().isNotEmpty)
+            'X-Request-ID': requestId.trim(),
+        },
+        sendTimeout: _heavyRequestTimeout,
+        receiveTimeout: _heavyRequestTimeout,
+      ),
+    );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return Map<String, dynamic>.from(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to analyze audio: ${response.body}');
+      return Map<String, dynamic>.from(response.data as Map);
     }
+    throw Exception('Failed to analyze audio: ${response.data}');
   }
 
   // Analyze EEG

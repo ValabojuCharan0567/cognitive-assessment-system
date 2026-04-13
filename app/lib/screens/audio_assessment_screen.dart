@@ -492,10 +492,11 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
         onSendProgress: (sent, total) {
           if (!mounted) return;
           final progress = total > 0 ? sent / total : null;
+          final isUploadDone = progress != null && progress >= 0.999;
           setState(() {
             _uploadProgress = progress?.clamp(0.0, 1.0);
-            _uploadStatus = 'Uploading audio...';
-            _phase = AudioPhase.uploading;
+            _uploadStatus = isUploadDone ? 'Analyzing audio...' : 'Uploading audio...';
+            _phase = isUploadDone ? AudioPhase.analyzing : AudioPhase.uploading;
           });
         },
       );
