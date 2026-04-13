@@ -171,6 +171,14 @@ Use this as the **final validation gate** before you call the rollout “done”
 - **`GOOGLE_OAUTH_CLIENT_ID`** does not match the **Web** client used by the app / token audience.
 - **Android OAuth** client: **package name** mismatch or **SHA-1** from **release** keystore missing (debug SHA-1 does not cover release APK).
 
+### Audio / EEG: `ClientConnection closed while receiving data` or timeouts
+
+- **Large/slow ML:** `/audio/analyze` sends big JSON + runs librosa on the server; the connection can drop if the worker is killed (**OOM**) or times out.
+- **Render free (512 MB):** use **`GUNICORN_WORKERS=1`** so only one worker loads models (reduces RAM). Optionally raise plan for more CPU/RAM.
+- **Server timeout:** set **`GUNICORN_TIMEOUT=300`** (seconds) in Render environment variables (matches `backend/gunicorn.conf.py` default after deploy).
+- **Cold start:** open **`/api/cloud/health`** once, wait ~30s, then try analysis again.
+- **App:** release builds use a **5-minute** client timeout for heavy `POST`s (`app/lib/services/api_service.dart`); rebuild the APK after pulling latest.
+
 ### Flutter app cannot reach API
 
 - **`API_BASE_URL`** typo, missing `/api` suffix, or still pointing at `192.168.x.x`.
@@ -208,10 +216,12 @@ Notes:
 Compose (optional):
 
 ```bash
-cp infra/.env.example infra/.env
-# Edit infra/.env — set HOST_DATASET_PATH and secrets
+cp .env.example .env
+# Edit .env — set GOOGLE_OAUTH_CLIENT_ID, DATASET_PATH, HOST_DATASET_PATH, etc.
 docker compose -f infra/docker-compose.yml up --build
 ```
+
+Compose reads **`../.env`** (repo root) via `env_file`. Local Flask loads the same **`.env`** automatically (see `backend/api/app.py` + `python-dotenv`).
 
 ## Flutter Android — release APK
 

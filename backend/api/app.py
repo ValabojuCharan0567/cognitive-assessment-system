@@ -19,6 +19,16 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List
 
+# Load repo-root `.env` before `config` reads os.environ (local dev / Docker env_file).
+_repo_root = Path(__file__).resolve().parents[2]
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(_repo_root / ".env")
+    load_dotenv(_repo_root / "infra" / ".env", override=False)
+except ImportError:
+    pass
+
 from flask import Flask, jsonify, request
 import certifi
 import requests

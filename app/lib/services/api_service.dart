@@ -9,7 +9,32 @@ class ApiService {
     defaultValue: 'http://127.0.0.1:8000/api',
   );
 
+  /// Large JSON + ML on the server (e.g. `/audio/analyze`) can take minutes.
+  static const Duration _heavyRequestTimeout = Duration(seconds: 300);
+
   String get baseUrl => _kBaseUrl;
+
+  Future<http.Response> _postJsonLong(
+    Uri url,
+    Map<String, dynamic> body,
+  ) {
+    return http
+        .post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(
+          _heavyRequestTimeout,
+          onTimeout: () {
+            throw Exception(
+              'Request timed out after ${_heavyRequestTimeout.inMinutes} minutes. '
+              'Try a shorter recording, check $baseUrl/cloud/ready in a browser, '
+              'or retry if the host was cold-starting.',
+            );
+          },
+        );
+  }
 
   // Example endpoint
   String get healthUrl => "$baseUrl/cloud/health";
@@ -122,16 +147,12 @@ class ApiService {
     required Map<String, dynamic> behavioral,
   }) async {
     final url = Uri.parse("$baseUrl/assessment/submit");
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'assessment_id': assessmentId,
-        'eeg': eeg,
-        'audio': audio,
-        'behavioral': behavioral,
-      }),
-    );
+    final response = await _postJsonLong(url, {
+      'assessment_id': assessmentId,
+      'eeg': eeg,
+      'audio': audio,
+      'behavioral': behavioral,
+    });
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return Map<String, dynamic>.from(jsonDecode(response.body));
@@ -152,15 +173,12 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/audio/analyze");
     final base64Audio = base64Encode(bytes);
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'audio_base64': base64Audio,
-        'audio_ext': ext,
-        'device_preprocessing': devicePreprocessing,
-      }),
-    );
+    final body = <String, dynamic>{
+      'audio_base64': base64Audio,
+      'audio_ext': ext,
+      'device_preprocessing': devicePreprocessing,
+    };
+    final response = await _postJsonLong(url, body);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return Map<String, dynamic>.from(jsonDecode(response.body));
@@ -177,15 +195,12 @@ class ApiService {
     Map<String, dynamic>? devicePreprocessing,
   }) async {
     final url = Uri.parse("$baseUrl/eeg/analyze");
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'eeg_base64': eegB64,
-        'eeg_ext': ext,
-        'device_preprocessing': devicePreprocessing,
-      }),
-    );
+    final body = <String, dynamic>{
+      'eeg_base64': eegB64,
+      'eeg_ext': ext,
+      'device_preprocessing': devicePreprocessing,
+    };
+    final response = await _postJsonLong(url, body);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return Map<String, dynamic>.from(jsonDecode(response.body));
