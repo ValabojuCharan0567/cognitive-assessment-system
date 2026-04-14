@@ -3,9 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 import io
+import os
+import subprocess
+import tempfile
 
 import librosa
 import numpy as np
+import soundfile as sf
 
 
 MIN_VALID_SAMPLES = 256
@@ -14,6 +18,7 @@ MIN_ANALYSIS_SAMPLES = 2048
 MIN_PEAK_AMPLITUDE = 4e-2  # ~0.04 peak corresponds to low but audible human voice
 MIN_RMS_AMPLITUDE = 5e-3  # ~0.005 RMS to avoid non-speech hiss
 CANONICAL_AUDIO_SR = 16000
+AUDIO_DECODE_TIMEOUT_SEC = int(os.getenv("AUDIO_DECODE_TIMEOUT_SEC", "20") or 20)
 
 
 def _expected_feature_count(scaler: object | None = None, expected: int | None = None) -> int | None:
@@ -86,8 +91,26 @@ def load_audio_consistent(source: str | Path | io.BytesIO) -> tuple[np.ndarray, 
     All runtime audio inference should pass through here so input format does
     not silently change the model's sample rate, channel count, or numeric type.
     """
-    y, _sr = librosa.load(source, sr=CANONICAL_AUDIO_SR, mono=True)
-    y = np.asarray(y, dtype=np.float32)
+    y: np.ndarray
+    sr: int
+
+    # Fast path: formats directly supported by libsndfile (e.g. WAV/FLAC/OGG).
+    try:
+        if isinstance(source, io.BytesIO):
+            source.seek(0)
+        y_raw, sr_raw = sf.read(source, dtype="float32", always_2d=False)
+        y = np.asarray(y_raw, dtype=np.float32)
+        if y.ndim > 1:
+            y = np.mean(y, axis=1)
+        sr = int(sr_raw)
+    except Exception:
+        # Fallback for AAC/M4A and other formats: decode with ffmpeg to PCM WAV.
+        y, sr = _decode_with_ffmpeg(source)
+
+    if sr != CANONICAL_AUDIO_SR and y.size > 0:
+        y = librosa.resample(y, orig_sr=sr, target_sr=CANONICAL_AUDIO_SR)
+        sr = CANONICAL_AUDIO_SR
+
     y = np.ravel(y)
     y = np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
 
@@ -96,6 +119,77 @@ def load_audio_consistent(source: str | Path | io.BytesIO) -> tuple[np.ndarray, 
         y = y / peak
 
     return y.astype(np.float32, copy=False), CANONICAL_AUDIO_SR
+
+
+def _decode_with_ffmpeg(source: str | Path | io.BytesIO) -> tuple[np.ndarray, int]:
+    temp_dir = tempfile.mkdtemp(prefix="audio_decode_")
+    in_path = Path(temp_dir) / "input_audio"
+    out_path = Path(temp_dir) / "decoded.wav"
+
+    try:
+        if isinstance(source, io.BytesIO):
+            source.seek(0)
+            in_path.write_bytes(source.read())
+        else:
+            src_path = Path(source)
+            in_path.write_bytes(src_path.read_bytes())
+
+        cmd = [
+            "ffmpeg",
+            "-nostdin",
+            "-v",
+            "error",
+            "-y",
+            "-i",
+            str(in_path),
+            "-ar",
+            str(CANONICAL_AUDIO_SR),
+            "-ac",
+            "1",
+            str(out_path),
+        ]
+        try:
+            proc = subprocess.run(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                timeout=AUDIO_DECODE_TIMEOUT_SEC,
+                check=False,
+                text=True,
+            )
+        except FileNotFoundError as exc:
+            raise ValueError(
+                "Audio decode backend missing: ffmpeg is not installed on the server."
+            ) from exc
+        except subprocess.TimeoutExpired as exc:
+            raise ValueError(
+                f"Audio decode timed out after {AUDIO_DECODE_TIMEOUT_SEC}s."
+            ) from exc
+
+        if proc.returncode != 0 or not out_path.exists():
+            detail = (proc.stderr or "").strip()
+            raise ValueError(
+                f"Audio decode failed via ffmpeg: {detail or 'unknown ffmpeg error'}"
+            )
+
+        y_raw, sr_raw = sf.read(out_path, dtype="float32", always_2d=False)
+        y = np.asarray(y_raw, dtype=np.float32)
+        if y.ndim > 1:
+            y = np.mean(y, axis=1)
+        return y, int(sr_raw)
+    finally:
+        try:
+            out_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        try:
+            in_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        try:
+            Path(temp_dir).rmdir()
+        except Exception:
+            pass
 
 
 def _extract_features_from_signal(
