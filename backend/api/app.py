@@ -1647,7 +1647,7 @@ def audio_analyze():
         return jsonify({"error": "audio_base64 required and cannot be empty"}), 400
 
     try:
-        result = analyze_audio_payload(audio_b64, audio_ext)
+        result = analyze_audio_payload(audio_b64, audio_ext, request_id=request_id)
         if isinstance(device_preprocessing, dict):
             result["device_preprocessing"] = device_preprocessing
         result["request_id"] = request_id

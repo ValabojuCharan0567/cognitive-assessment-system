@@ -16,14 +16,25 @@ class ApiService {
 
   String get baseUrl => _kBaseUrl;
 
+  String _requestId(String prefix, [String? provided]) {
+    final value = (provided ?? '').trim();
+    if (value.isNotEmpty) return value;
+    final ts = DateTime.now().toUtc().microsecondsSinceEpoch;
+    return '$prefix-$ts';
+  }
+
   Future<http.Response> _postJsonLong(
     Uri url,
     Map<String, dynamic> body,
+    String requestId,
   ) {
     return http
         .post(
           url,
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-ID': requestId,
+          },
           body: jsonEncode(body),
         )
         .timeout(
@@ -147,14 +158,16 @@ class ApiService {
     required Map<String, dynamic> eeg,
     required Map<String, dynamic> audio,
     required Map<String, dynamic> behavioral,
+    String? requestId,
   }) async {
     final url = Uri.parse("$baseUrl/assessment/submit");
+    final reqId = _requestId('submit', requestId);
     final response = await _postJsonLong(url, {
       'assessment_id': assessmentId,
       'eeg': eeg,
       'audio': audio,
       'behavioral': behavioral,
-    });
+    }, reqId);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return Map<String, dynamic>.from(jsonDecode(response.body));
@@ -173,6 +186,7 @@ class ApiService {
     dynamic cancelToken,
     Function(int, int)? onSendProgress,
   }) async {
+    final reqId = _requestId('audio-$childId', requestId);
     final url = '$baseUrl/audio/analyze';
     final formData = FormData.fromMap({
       'child_id': childId,
@@ -189,8 +203,7 @@ class ApiService {
       onSendProgress: onSendProgress,
       options: Options(
         headers: {
-          if (requestId != null && requestId.trim().isNotEmpty)
-            'X-Request-ID': requestId.trim(),
+          'X-Request-ID': reqId,
         },
         sendTimeout: _heavyRequestTimeout,
         receiveTimeout: _heavyRequestTimeout,
@@ -209,10 +222,13 @@ class ApiService {
     List<int> bytes, {
     required String ext,
     Map<String, dynamic>? devicePreprocessing,
+    String? requestId,
   }) async {
     final uri = Uri.parse("$baseUrl/eeg/analyze");
+    final reqId = _requestId('eeg-$childId', requestId);
 
     final req = http.MultipartRequest('POST', uri);
+    req.headers['X-Request-ID'] = reqId;
     req.fields['child_id'] = childId;
     req.fields['eeg_ext'] = ext;
     if (devicePreprocessing != null) {

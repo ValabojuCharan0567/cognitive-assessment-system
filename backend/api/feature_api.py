@@ -69,7 +69,7 @@ def features_audio_analyze():
 
     try:
         logger.debug("REQ %s Audio request received ext=%s", request_id, audio_ext or 'unknown')
-        result = analyze_audio_payload(audio_b64, audio_ext)
+        result = analyze_audio_payload(audio_b64, audio_ext, request_id=request_id)
         if isinstance(device_preprocessing, dict):
             result["device_preprocessing"] = device_preprocessing
         result["request_id"] = request_id
