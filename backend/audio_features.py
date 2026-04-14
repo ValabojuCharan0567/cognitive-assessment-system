@@ -193,16 +193,14 @@ def _decode_with_ffmpeg(source: str | Path | io.BytesIO) -> tuple[np.ndarray, in
 
 
 def _extract_features_from_signal(
-    y: np.ndarray, sr: int, mfcc: bool = True, chroma: bool = True, mel: bool = True
+    y: np.ndarray, sr: int, mfcc: bool = True, chroma: bool = False, mel: bool = False
 ) -> np.ndarray:
     y, sr = _prepare_audio_signal(y, sr)
     analysis_n_fft = min(1024, len(y))
     hop_length = max(128, analysis_n_fft // 4)
 
     result: Iterable[float] | np.ndarray = np.array([])
-    stft = None
-    if chroma:
-        stft = np.abs(librosa.stft(y, n_fft=analysis_n_fft, hop_length=hop_length))
+    
     if mfcc:
         mfcc_matrix = librosa.feature.mfcc(
             y=y,
@@ -228,63 +226,6 @@ def _extract_features_from_signal(
         else:
             zeros = np.zeros(mfcc_matrix.shape[0], dtype=float)
             result = np.hstack((result, zeros, zeros, zeros, zeros))
-    if chroma and stft is not None:
-        chroma_feat = np.mean(
-            librosa.feature.chroma_stft(S=stft, sr=sr, hop_length=hop_length).T,
-            axis=0,
-        )
-        result = np.hstack((result, chroma_feat))
-    if mel:
-        mel_spec = np.mean(
-            librosa.feature.melspectrogram(
-                y=y,
-                sr=sr,
-                n_fft=analysis_n_fft,
-                hop_length=hop_length,
-            ).T,
-            axis=0,
-        )
-        result = np.hstack((result, mel_spec))
-
-    # Adds spectral shape separation across sub-bands.
-    # Low-sample-rate clips can violate spectral_contrast's Nyquist band
-    # assumptions, so adapt the number of bands and zero-pad the summary back
-    # to the fixed training width.
-    contrast_features = np.zeros(14, dtype=float)
-    try:
-        contrast_fmin = 200.0
-        nyquist = float(sr) / 2.0
-        if nyquist > contrast_fmin * 2.0:
-            max_n_bands = int(np.floor(np.log2(nyquist / contrast_fmin)))
-            contrast_n_bands = max(1, min(6, max_n_bands))
-            contrast = librosa.feature.spectral_contrast(
-                y=y,
-                sr=sr,
-                n_fft=analysis_n_fft,
-                hop_length=hop_length,
-                fmin=contrast_fmin,
-                n_bands=contrast_n_bands,
-            )
-            contrast_summary = np.hstack((np.mean(contrast.T, axis=0), np.std(contrast.T, axis=0)))
-            copy_len = min(contrast_features.shape[0], contrast_summary.shape[0])
-            if copy_len > 0:
-                contrast_features[:copy_len] = contrast_summary[:copy_len]
-    except Exception:
-        pass
-    result = np.hstack((result, contrast_features))
-
-    # Harmonic tonal structure can separate calmer vs stressed speech characteristics.
-    # Very short clips do not carry stable tonal structure and can trigger CQT
-    # warning spam inside tonnetz, so skip this block for sub-second audio.
-    try:
-        if len(y) >= max(analysis_n_fft, sr // 2):
-            y_harmonic = librosa.effects.harmonic(y)
-            tonnetz = librosa.feature.tonnetz(y=y_harmonic, sr=sr)
-            result = np.hstack((result, np.mean(tonnetz.T, axis=0), np.std(tonnetz.T, axis=0)))
-        else:
-            result = np.hstack((result, np.zeros(12, dtype=float)))
-    except Exception:
-        result = np.hstack((result, np.zeros(12, dtype=float)))
 
     # Core audio descriptors requested for robust cognitive-load modeling.
     zcr = librosa.feature.zero_crossing_rate(y, hop_length=hop_length)
@@ -325,64 +266,6 @@ def _extract_features_from_signal(
     p75 = np.percentile(rms_vals, 75)
     moderate_energy_ratio = float(np.mean((rms_vals >= p25) & (rms_vals <= p75)))
     result = np.hstack((result, moderate_energy_ratio))
-
-    # Pitch stability: calmer speech tends to show less F0 volatility.
-    try:
-        f0 = librosa.yin(
-            y,
-            fmin=librosa.note_to_hz("C2"),
-            fmax=librosa.note_to_hz("C7"),
-            sr=sr,
-            frame_length=analysis_n_fft,
-            hop_length=hop_length,
-        )
-        f0 = f0[np.isfinite(f0)]
-        if f0.size > 0:
-            f0_std = np.std(f0)
-            f0_iqr = np.percentile(f0, 75) - np.percentile(f0, 25)
-            # Medium-class cue: moderate pitch variability (distance from center band).
-            moderate_pitch_score = 1.0 / (1.0 + abs(f0_std - np.median(np.abs(f0 - np.median(f0)))))
-            result = np.hstack(
-                (
-                    result,
-                    np.mean(f0),
-                    f0_std,
-                    np.var(f0),
-                    np.percentile(f0, 25),
-                    np.percentile(f0, 75),
-                    f0_iqr,
-                    moderate_pitch_score,
-                )
-            )
-        else:
-            result = np.hstack((result, np.zeros(8, dtype=float)))
-    except Exception:
-        result = np.hstack((result, np.zeros(8, dtype=float)))
-
-    # Rhythm consistency: onset and tempo stability can separate medium expressiveness.
-    try:
-        onset_env = librosa.onset.onset_strength(
-            y=y,
-            sr=sr,
-            n_fft=analysis_n_fft,
-            hop_length=hop_length,
-        )
-        tempo, _ = librosa.beat.beat_track(
-            onset_envelope=onset_env,
-            sr=sr,
-            hop_length=hop_length,
-        )
-        result = np.hstack(
-            (
-                result,
-                np.mean(onset_env),
-                np.std(onset_env),
-                np.var(onset_env),
-                float(tempo),
-            )
-        )
-    except Exception:
-        result = np.hstack((result, np.zeros(4, dtype=float)))
 
     return np.asarray(result, dtype=float)
 

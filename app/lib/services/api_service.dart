@@ -187,6 +187,14 @@ class ApiService {
     Function(int, int)? onSendProgress,
   }) async {
     final reqId = _requestId('audio-$childId', requestId);
+    
+    // 🔥 Wake server before heavy request (prevents cold start abort)
+    try {
+      await checkHealth();
+    } catch (e) {
+      debugPrint('⚠️ Health check failed, proceeding anyway: $e');
+    }
+    
     final url = '$baseUrl/audio/analyze';
     final formData = FormData.fromMap({
       'child_id': childId,
