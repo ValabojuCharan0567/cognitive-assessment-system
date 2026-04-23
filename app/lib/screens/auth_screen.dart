@@ -137,6 +137,13 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       }
 
+      if (!kIsWeb && GoogleSignInService.serverClientId.trim().isEmpty) {
+        throw Exception(
+          'Android Google sign-in requires `GOOGLE_SERVER_CLIENT_ID` at build time.\n'
+          'Run with `--dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>`.',
+        );
+      }
+
       await GoogleSignInService.ensureInitialized();
       final account = await GoogleSignInService.signIn();
       final auth = account.authentication;

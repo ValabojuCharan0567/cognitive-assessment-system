@@ -20,14 +20,28 @@ class GoogleSignInService {
 
   static String get webClientId => _webClientId;
 
+  static String get serverClientId => _serverClientId;
+
+  static bool get _requiresServerClientId {
+    return !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  }
+
   static Future<void> ensureInitialized() async {
     if (_initialized) return;
+
+    if (_requiresServerClientId && _serverClientId.trim().isEmpty) {
+      throw Exception(
+        'Android Google sign-in requires `GOOGLE_SERVER_CLIENT_ID` build-time config.\n'
+        'Run the app with `--dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>`.',
+      );
+    }
 
     await instance.initialize(
       clientId:
           (kIsWeb && _webClientId.trim().isNotEmpty) ? _webClientId.trim() : null,
-      serverClientId:
-          _serverClientId.trim().isNotEmpty ? _serverClientId.trim() : null,
+      serverClientId: _serverClientId.trim().isNotEmpty
+          ? _serverClientId.trim()
+          : null,
     );
     _initialized = true;
   }
