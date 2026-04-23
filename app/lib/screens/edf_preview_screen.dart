@@ -22,7 +22,7 @@ class _EdfPreviewScreenState extends State<EdfPreviewScreen> {
 
   Future<FilePickerResult?> _pickEegFile() async {
     try {
-      final filtered = await FilePicker.platform.pickFiles(
+      final filtered = await FilePicker.pickFiles(
         type: kIsWeb ? FileType.custom : FileType.any,
         allowedExtensions: kIsWeb ? ['edf', 'csv'] : null,
         withData: true,

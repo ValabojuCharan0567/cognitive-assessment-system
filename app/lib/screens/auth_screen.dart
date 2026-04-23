@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../services/api_service.dart';
+import '../services/google_sign_in_service.dart';
 import '../services/session_service.dart';
 import '../theme/app_design.dart';
 import 'dashboard_screen.dart';
@@ -21,27 +21,10 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isLoading = false;
   bool _restoringSession = true;
   String? _error;
-  static GoogleSignIn? _googleSignInSingleton;
-  static const String _webClientId = String.fromEnvironment(
-    'GOOGLE_WEB_CLIENT_ID',
-    defaultValue: '',
-  );
-  static const String _serverClientId = String.fromEnvironment(
-    'GOOGLE_SERVER_CLIENT_ID',
-    defaultValue: '',
-  );
-  late final GoogleSignIn _googleSignIn;
 
   @override
   void initState() {
     super.initState();
-    _googleSignIn = _googleSignInSingleton ??= GoogleSignIn(
-      scopes: <String>['email'],
-      clientId:
-          (kIsWeb && _webClientId.trim().isNotEmpty) ? _webClientId.trim() : null,
-      serverClientId:
-          _serverClientId.trim().isNotEmpty ? _serverClientId.trim() : null,
-    );
     _bootstrapAuth();
   }
 
@@ -59,17 +42,21 @@ class _AuthScreenState extends State<AuthScreen> {
         return;
       }
 
-      final account = await _googleSignIn.signInSilently();
+      await GoogleSignInService.ensureInitialized();
+      final account = await GoogleSignInService.restoreSession();
       if (account == null) {
         await _session.clearSession();
         if (mounted) setState(() => _restoringSession = false);
         return;
       }
 
-      final auth = await account.authentication;
+      final auth = account.authentication;
+      final clientAuth = await account.authorizationClient.authorizationForScopes([
+        'email',
+      ]);
       await _api.loginWithGoogle(
         idToken: auth.idToken,
-        accessToken: auth.accessToken,
+        accessToken: clientAuth?.accessToken,
       );
       await _session.saveUserSession(
         email: account.email,
@@ -97,7 +84,7 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       await _session.clearSession();
       try {
-        await _googleSignIn.signOut();
+        await GoogleSignInService.signOut();
       } catch (_) {
         // Best-effort; user can still pick an account on next sign-in.
       }
@@ -144,23 +131,23 @@ class _AuthScreenState extends State<AuthScreen> {
       _error = null;
     });
     try {
-      if (kIsWeb && _webClientId.trim().isEmpty) {
+      if (kIsWeb && GoogleSignInService.webClientId.trim().isEmpty) {
         throw Exception(
           'Google web sign-in requires `GOOGLE_WEB_CLIENT_ID` for the FedCM flow.',
         );
       }
 
-      final account = await _googleSignIn.signIn();
-      if (account == null) {
-        throw Exception('Google sign-in was cancelled.');
-      }
-
-      final auth = await account.authentication;
-      debugPrint('[DEBUG] Auth tokens - idToken: ${auth.idToken}, accessToken: ${auth.accessToken}');
+      await GoogleSignInService.ensureInitialized();
+      final account = await GoogleSignInService.signIn();
+      final auth = account.authentication;
+      final clientAuth = await account.authorizationClient.authorizationForScopes([
+        'email',
+      ]);
+      debugPrint('[DEBUG] Auth tokens - idToken: ${auth.idToken}, accessToken: ${clientAuth?.accessToken}');
       
       await _api.loginWithGoogle(
         idToken: auth.idToken,
-        accessToken: auth.accessToken,
+        accessToken: clientAuth?.accessToken,
       );
       await _session.saveUserSession(
         email: account.email,

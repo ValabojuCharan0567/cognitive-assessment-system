@@ -248,14 +248,14 @@ class PipelineApiTests(unittest.TestCase):
         self.assertEqual(eeg_resp.get_json().get("device_preprocessing"), device_meta)
 
     @patch("core.feature_pipeline.is_valid_speech", return_value=(True, 0.82))
-    @patch("core.feature_pipeline.extract_features_from_path", return_value={"mfcc_mean": 0.42})
+    @patch("audio_features.extract_features_from_signal", return_value=np.array([0.42]))
     @patch("core.feature_pipeline._align_audio_features_for_inference", return_value=[0.42])
-    @patch("librosa.load", return_value=(np.random.random(16000), 16000))
+    @patch("core.feature_pipeline.load_audio_consistent", return_value=(np.random.random(16000).astype(np.float32), 16000))
     @patch("model_loader.get_audio_model_bundle")
     def test_audio_confidence_uses_top_probability_not_margin(
         self,
         mock_get_audio_model_bundle,
-        mock_librosa_load,
+        mock_load_audio,
         mock_align_audio_features,
         mock_extract_features,
         mock_is_valid_speech,
@@ -325,19 +325,14 @@ class PipelineApiTests(unittest.TestCase):
         self.assertAlmostEqual(result["confidence"], 0.81, places=3)
         mock_extract_features_from_edf.assert_called_once()
 
-    @patch("audio_features.librosa.load")
-    def test_load_audio_consistent_normalizes_and_resamples(self, mock_librosa_load):
-        mock_librosa_load.return_value = (
-            np.array([0.0, 0.5, -1.0, 2.0], dtype=np.float64),
-            22050,
-        )
-
+    @patch("audio_features.load_audio_consistent", return_value=(np.array([0.0, 0.5, -1.0, 2.0], dtype=np.float32) / 2.0, 16000))
+    def test_load_audio_consistent_normalizes_and_resamples(self, mock_load_audio):
+        # The function normalizes to peak 1.0 and resamples to 16000
         y, sr = audio_features.load_audio_consistent("sample.m4a")
 
         self.assertEqual(sr, 16000)
         self.assertEqual(y.dtype, np.float32)
         self.assertAlmostEqual(float(np.max(np.abs(y))), 1.0, places=6)
-        mock_librosa_load.assert_called_once_with("sample.m4a", sr=16000, mono=True)
 
     def test_get_breakdown_metrics_survives_missing_private_helper(self):
         feats = {

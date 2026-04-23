@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 import '../services/api_service.dart';
+import '../services/google_sign_in_service.dart';
 import '../services/session_service.dart';
 import '../theme/app_design.dart';
 import 'auth_screen.dart';
@@ -23,22 +23,6 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen> {
   String? _error;
   List<dynamic> _reports = [];
   String? _childId;
-  static GoogleSignIn? _googleSignInSingleton;
-  static const String _webClientId = String.fromEnvironment(
-    'GOOGLE_WEB_CLIENT_ID',
-    defaultValue: '',
-  );
-  static const String _serverClientId = String.fromEnvironment(
-    'GOOGLE_SERVER_CLIENT_ID',
-    defaultValue: '',
-  );
-  late final GoogleSignIn _googleSignIn = _googleSignInSingleton ??= GoogleSignIn(
-    scopes: const <String>['email'],
-    clientId:
-        (_webClientId.trim().isNotEmpty) ? _webClientId.trim() : null,
-    serverClientId:
-        (_serverClientId.trim().isNotEmpty) ? _serverClientId.trim() : null,
-  );
 
   Map<String, dynamic>? get _childFromArgs {
     final raw = ModalRoute.of(context)?.settings.arguments;
@@ -331,7 +315,7 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen> {
 
   Future<void> _logout() async {
     try {
-      await _googleSignIn.signOut();
+      await GoogleSignInService.signOut();
     } catch (_) {}
     await _session.clearSession();
     if (!mounted) return;

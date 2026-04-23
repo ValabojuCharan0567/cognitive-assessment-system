@@ -79,7 +79,7 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
 
   Future<FilePickerResult?> _pickEegFile() async {
     try {
-      final filtered = await FilePicker.platform.pickFiles(
+      final filtered = await FilePicker.pickFiles(
         type: kIsWeb ? FileType.custom : FileType.any,
         allowedExtensions: kIsWeb ? ['edf'] : null,
         withData: true,

@@ -1,8 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:async';
 import '../services/api_service.dart';
+import '../services/google_sign_in_service.dart';
 import '../services/session_service.dart';
 import '../theme/app_design.dart';
 import 'auth_screen.dart';
@@ -23,23 +22,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _loading = true;
   String? _error;
   List<dynamic> _children = [];
-  static GoogleSignIn? _googleSignInSingleton;
-  static const String _webClientId = String.fromEnvironment(
-    'GOOGLE_WEB_CLIENT_ID',
-    defaultValue: '',
-  );
-  static const String _serverClientId = String.fromEnvironment(
-    'GOOGLE_SERVER_CLIENT_ID',
-    defaultValue: '',
-  );
-  late final GoogleSignIn _googleSignIn =
-      _googleSignInSingleton ??= GoogleSignIn(
-    scopes: const <String>['email'],
-    clientId:
-        (kIsWeb && _webClientId.trim().isNotEmpty) ? _webClientId.trim() : null,
-    serverClientId:
-        _serverClientId.trim().isNotEmpty ? _serverClientId.trim() : null,
-  );
 
   // 🚀 Auto-logout on inactivity
   static const int _inactivityTimeoutSeconds = 300; // 5 minutes
@@ -137,7 +119,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> _logout() async {
     try {
-      await _googleSignIn.signOut();
+      await GoogleSignInService.signOut();
     } catch (_) {}
     await _session.clearSession();
     if (!mounted) return;

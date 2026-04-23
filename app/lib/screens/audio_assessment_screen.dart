@@ -354,7 +354,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       _error = null;
     });
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: kIsWeb ? FileType.custom : FileType.audio,
         allowedExtensions: kIsWeb ? ['m4a', 'mp3', 'wav', 'webm'] : null,
         withData: true,
