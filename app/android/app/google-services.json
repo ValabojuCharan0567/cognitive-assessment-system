@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "432858194573",
+    "project_id": "cognitive-assessment-sys-be0bf",
+    "storage_bucket": "cognitive-assessment-sys-be0bf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:432858194573:android:9a10346a22b635a3ca38c4",
+        "android_client_info": {
+          "package_name": "com.example.neuro_ai_cognitive_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_EZcgXuI0mDH8zH0Kx1cuH-kFG8t-yjw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
