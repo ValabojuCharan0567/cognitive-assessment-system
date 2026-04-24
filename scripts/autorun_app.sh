@@ -81,7 +81,15 @@ if ! command -v flutter >/dev/null 2>&1; then
 fi
 
 cd "$ROOT_DIR/app"
+printf "==> Flutter will use GOOGLE_SERVER_CLIENT_ID=%s\n" "${GOOGLE_SERVER_CLIENT_ID:-<none>}"
+printf "==> Flutter will use GOOGLE_WEB_CLIENT_ID=%s\n" "${GOOGLE_WEB_CLIENT_ID:-<none>}"
 flutter_args=(--dart-define=API_BASE_URL="$API_BASE_URL")
+if [[ -n "${GOOGLE_SERVER_CLIENT_ID:-}" ]]; then
+  flutter_args+=(--dart-define=GOOGLE_SERVER_CLIENT_ID="$GOOGLE_SERVER_CLIENT_ID")
+fi
+if [[ -n "${GOOGLE_WEB_CLIENT_ID:-}" ]]; then
+  flutter_args+=(--dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID")
+fi
 if [[ -n "${FLUTTER_DEVICE_ID:-}" ]]; then
   flutter_args+=(-d "$FLUTTER_DEVICE_ID")
 fi

@@ -61,6 +61,17 @@ List available devices:
 flutter devices
 ```
 
+### Local Google Sign-In build flags
+If you are testing Google sign-in locally, export the client IDs and the run scripts will forward them into Flutter automatically:
+
+```bash
+export GOOGLE_SERVER_CLIENT_ID="<your-android-server-client-id>"
+export GOOGLE_WEB_CLIENT_ID="<your-web-client-id>"
+bash scripts/run_local_dev.sh android
+```
+
+If you use `scripts/autorun_app.sh`, it also forwards these values.
+
 ### Fix "HTTPS is required for secure upload" during local Google login
 
 Phones use a **private LAN IP** (for example `192.168.x.x`), not `127.0.0.1`, so the backend may treat them as non-local and require HTTPS.

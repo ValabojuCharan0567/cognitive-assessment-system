@@ -255,6 +255,12 @@ flutter_args=(
   --dart-define=API_BASE_URL="$API_URL"
   --dart-define=FORCE_HTTPS_UPLOADS=false
 )
+if [[ -n "${GOOGLE_SERVER_CLIENT_ID:-}" ]]; then
+  flutter_args+=(--dart-define=GOOGLE_SERVER_CLIENT_ID="$GOOGLE_SERVER_CLIENT_ID")
+fi
+if [[ -n "${GOOGLE_WEB_CLIENT_ID:-}" ]]; then
+  flutter_args+=(--dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID")
+fi
 
 # Flutter web uses the current origin (host+port) for OAuth redirect_uri.
 # To avoid "redirect_uri_mismatch" between runs, we force a stable origin.
