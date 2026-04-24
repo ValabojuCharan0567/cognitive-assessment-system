@@ -7,6 +7,7 @@ import csv
 import io
 import ipaddress
 import json
+import logging
 import os
 import signal
 import ssl
@@ -44,6 +45,13 @@ from feature_api import features_bp
 from cloud_api import cloud_bp
 from reports_api import reports_bp
 from flask_cors import CORS
+
+# Structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger("cognitive-app")
 try:
     from google.oauth2 import id_token as google_id_token
     from google.auth.transport import requests as google_requests
@@ -84,14 +92,14 @@ def _should_run_startup_init() -> bool:
 
 def _initialize_runtime() -> None:
     if DEMO_MODE:
-        print("[INIT] Running in DEMO MODE (dataset not found)", flush=True)
-    print("[INIT] Starting database and model initialization...", flush=True)
+        logger.warning("⚠️  Running in DEMO MODE (dataset not found)")
+    logger.info("🚀 Starting database and model initialization...")
     init_db()
-    print("[INIT] Database and models ready", flush=True)
+    logger.info("✅ Database initialized")
 
 
 def _shutdown_handler(signum: int, _frame: Any) -> None:
-    print(f"[SHUTDOWN] Received signal {signum}; exiting gracefully.", flush=True)
+    logger.info(f"🛑 Received signal {signum}; shutting down gracefully.")
     sys.exit(0)
 
 
@@ -99,16 +107,22 @@ def _request_id() -> str:
     return (request.headers.get("X-Request-ID") or "unknown").strip() or "unknown"
 
 
+logger.info("🚀 Starting Cognitive Assessment Backend")
+
 if DEMO_MODE:
-    print("[INIT] Dataset not found; starting in DEMO MODE", flush=True)
+    logger.warning("⚠️  Running in DEMO MODE (dataset not found)")
 else:
+    logger.info("📂 Validating dataset...")
     validate_dataset(
         required_dirs=["speech_data"],
         required_any_of=["EEG", "EEG SIGNAL DATA"],
     )
-print("Warming up models...", flush=True)
+    logger.info("✅ Dataset validated")
+
+logger.info("🧠 Loading ML models...")
 warmup_models()
-print("Models ready", flush=True)
+logger.info("✅ Models loaded and warmed up")
+
 if _should_run_startup_init():
     _initialize_runtime()
     signal.signal(signal.SIGTERM, _shutdown_handler)
@@ -218,6 +232,13 @@ def _is_https_upload_exempt_path(path: str) -> bool:
 
 
 @app.before_request
+def log_request() -> Any:
+    """Log incoming requests at INFO level."""
+    logger.info(f"➡️  {request.method} {request.path}")
+    return None
+
+
+@app.before_request
 def enforce_https_uploads() -> Any:
     require_https = os.getenv("REQUIRE_HTTPS_UPLOADS", "1").strip().lower() in {
         "1",
@@ -242,17 +263,57 @@ def enforce_https_uploads() -> Any:
     return None
 
 
+@app.errorhandler(Exception)
+def handle_exception(error: Exception) -> tuple[dict, int]:
+    """Catch unhandled exceptions and return structured error."""
+    logger.exception(f"Unhandled exception: {error}")
+    return (
+        jsonify(
+            {
+                "error": "Internal server error",
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        ),
+        500,
+    )
+
+
 @app.route("/health", methods=["GET"])
 @app.route("/ready", methods=["GET"])
 def service_health():
-    return jsonify(
-        {
-            "status": "ok",
-            "service": "cognitive-assessment-backend",
-            "models_warmed": True,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-    )
+    """Health endpoint reflecting actual system state."""
+    try:
+        # Check dataset availability
+        data_exists = os.path.exists("/app/data") or os.path.exists(
+            os.getenv("DATASET_PATH", "/app/data")
+        )
+        
+        # Check if running in demo mode (graceful degradation)
+        demo_mode = DEMO_MODE
+        
+        # Overall status: ok if data exists and we're not in emergency demo mode
+        status = "ok" if (data_exists or demo_mode) else "degraded"
+        http_code = 200 if status == "ok" else 503
+        
+        return jsonify(
+            {
+                "status": status,
+                "service": "cognitive-assessment-backend",
+                "models_warmed": True,
+                "data_available": data_exists,
+                "demo_mode": demo_mode,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        ), http_code
+    except Exception as e:
+        logger.exception("Health check failed")
+        return jsonify(
+            {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        ), 500
 
 
 # Game library for report recommendations.
