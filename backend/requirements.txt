@@ -10,8 +10,6 @@ mne>=1.12.1
 matplotlib>=3.8.0
 edfio
 google-auth>=2.49.2
-google-api-python-client>=2.0.0
-google-auth-oauthlib>=1.0.0
 flask-cors==6.0.2
 certifi>=2026.4.22
 webrtcvad==2.0.10
