@@ -12,6 +12,7 @@ class ApiService {
 
   /// Large JSON + ML on the server (e.g. `/audio/analyze`) can take minutes.
   static const Duration _heavyRequestTimeout = Duration(seconds: 300);
+  static const Duration _healthCheckTimeout = Duration(seconds: 6);
   final Dio _dio = Dio();
 
   String get baseUrl => _kBaseUrl;
@@ -57,7 +58,11 @@ class ApiService {
     final url = Uri.parse(healthUrl);
 
     try {
-      final response = await http.get(url);
+      final response = await http
+          .get(url)
+          .timeout(_healthCheckTimeout, onTimeout: () {
+        throw Exception('Health check timed out after ${_healthCheckTimeout.inSeconds}s');
+      });
 
       debugPrint("🌐 BASE URL: $baseUrl");
       debugPrint("📡 Response: ${response.body}");

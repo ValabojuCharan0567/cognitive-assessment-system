@@ -212,7 +212,37 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
   }
 
   String _friendlyError(Object error) {
-    var text = error.toString().replaceFirst('Exception: ', '').trim();
+    String extractError(Object? payload) {
+      if (payload == null) return '';
+      if (payload is Map) {
+        return payload['error']?.toString() ?? payload['message']?.toString() ?? payload.toString();
+      }
+      if (payload is String) {
+        final trimmed = payload.trim();
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+          try {
+            final decoded = jsonDecode(trimmed);
+            return extractError(decoded);
+          } catch (_) {
+            return trimmed;
+          }
+        }
+        return trimmed;
+      }
+      return payload.toString();
+    }
+
+    String text;
+    if (error is DioError) {
+      text = extractError(error.response?.data);
+      if (text.isEmpty) {
+        text = error.message ?? '';
+      }
+    } else {
+      text = extractError(error);
+    }
+
+    text = text.replaceFirst('Exception: ', '').trim();
     const prefix = 'audio analysis failed:';
     if (text.toLowerCase().startsWith(prefix)) {
       text = text.substring(prefix.length).trim();
@@ -221,6 +251,10 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
   }
 
   String get _statusText {
+    if (_uploadStatus != null && _uploadStatus!.isNotEmpty) {
+      return _uploadStatus!;
+    }
+
     switch (_phase) {
       case AudioPhase.uploading:
         final progress = _uploadProgress;

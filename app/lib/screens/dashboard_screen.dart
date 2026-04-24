@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 import '../services/api_service.dart';
 import '../services/google_sign_in_service.dart';
 import '../services/session_service.dart';
@@ -15,18 +14,12 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen>
-    with WidgetsBindingObserver {
+class _DashboardScreenState extends State<DashboardScreen> {
   final _api = ApiService();
   final _session = SessionService();
   bool _loading = true;
   String? _error;
   List<dynamic> _children = [];
-
-  // 🚀 Auto-logout on inactivity
-  static const int _inactivityTimeoutSeconds = 300; // 5 minutes
-  Timer? _inactivityTimer;
-  AppLifecycleState? _lastLifecycleState;
 
   bool get _isCurrentRoute {
     final route = ModalRoute.of(context);
@@ -55,41 +48,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
-    // Monitor app lifecycle for auto-logout
-    WidgetsBinding.instance.addObserver(this);
-    // Start inactivity timer
-    _resetInactivityTimer();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!mounted || !_isCurrentRoute || _lastLifecycleState == state) {
-      return;
-    }
-    _lastLifecycleState = state;
-
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      _inactivityTimer?.cancel();
-    } else if (state == AppLifecycleState.resumed) {
-      _resetInactivityTimer();
-    }
-  }
-
-  void _resetInactivityTimer() {
-    _inactivityTimer?.cancel();
-    _inactivityTimer = Timer(
-      const Duration(seconds: _inactivityTimeoutSeconds),
-      () async {
-        await _logout();
-      },
-    );
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _inactivityTimer?.cancel();
     super.dispose();
   }
 
