@@ -867,6 +867,9 @@ def login():
 
 
 @app.route("/api/login/google", methods=["POST"])
+@app.route("/api/auth/google", methods=["POST"])
+@app.route("/login/google", methods=["POST"])
+@app.route("/auth/google", methods=["POST"])
 def google_login():
     data = request.get_json(force=True)
     id_token_str = str(data.get("id_token") or "").strip()

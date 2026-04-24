@@ -306,6 +306,12 @@ if [[ "$MODE" == "android" && $run_exit -ne 0 ]]; then
     --dart-define=API_BASE_URL="$API_URL"
     --dart-define=FORCE_HTTPS_UPLOADS=false
   )
+  if [[ -n "${GOOGLE_SERVER_CLIENT_ID:-}" ]]; then
+    retry_args+=(--dart-define=GOOGLE_SERVER_CLIENT_ID="$GOOGLE_SERVER_CLIENT_ID")
+  fi
+  if [[ -n "${GOOGLE_WEB_CLIENT_ID:-}" ]]; then
+    retry_args+=(--dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID")
+  fi
   if [[ "$MODE" == "android" && " ${FLUTTER_EXTRA_ARGS:-} " != *" -d "* ]]; then
     retry_args+=("-d" "$ANDROID_DEVICE_ID")
   fi

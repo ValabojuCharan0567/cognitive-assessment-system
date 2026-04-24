@@ -130,21 +130,43 @@ class ApiService {
       throw Exception('Failed to obtain Google authentication tokens. Please try again and ensure you grant the required permissions.');
     }
     
-    final url = Uri.parse("$baseUrl/login/google");
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'id_token': idToken,
-        'access_token': accessToken,
-      }),
-    );
+    final payload = jsonEncode({
+      'id_token': idToken,
+      'access_token': accessToken,
+    });
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return Map<String, dynamic>.from(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to login with Google: ${response.body}');
+    final normalizedBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+    final looksApiPrefixed = normalizedBase.endsWith('/api');
+    final candidates = <String>[
+      '$normalizedBase/login/google',
+      if (looksApiPrefixed) '${normalizedBase.substring(0, normalizedBase.length - 4)}/api/login/google',
+      if (looksApiPrefixed) '${normalizedBase.substring(0, normalizedBase.length - 4)}/api/auth/google',
+      if (looksApiPrefixed) '${normalizedBase.substring(0, normalizedBase.length - 4)}/auth/google',
+      if (!looksApiPrefixed) '$normalizedBase/api/login/google',
+      if (!looksApiPrefixed) '$normalizedBase/api/auth/google',
+      if (!looksApiPrefixed) '$normalizedBase/auth/google',
+    ];
+
+    http.Response? lastResponse;
+    for (final endpoint in candidates.toSet()) {
+      final response = await http.post(
+        Uri.parse(endpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: payload,
+      );
+      lastResponse = response;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return Map<String, dynamic>.from(jsonDecode(response.body));
+      }
+      // Keep probing common route variants only when endpoint is missing.
+      if (response.statusCode != 404) {
+        throw Exception('Failed to login with Google: ${response.body}');
+      }
     }
+
+    throw Exception(
+      'Failed to login with Google: ${lastResponse?.body ?? "No response from server"}',
+    );
   }
 
   // Create child

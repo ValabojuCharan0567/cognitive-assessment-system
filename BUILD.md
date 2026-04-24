@@ -12,7 +12,8 @@ This complements [README.md](README.md) and [docs/secure_deployment.md](docs/sec
 4. Build the Android APK from **`app/`**:
    ```bash
    flutter build apk --release \
-     --dart-define=API_BASE_URL=https://YOUR_HOST/api
+     --dart-define=API_BASE_URL=https://YOUR_HOST/api \
+     --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
    ```
 5. Install the APK (Drive, Telegram, etc.) and test on a device **off your dev Wi‑Fi** if possible.
 
@@ -147,6 +148,7 @@ Set these in Render / Railway / Docker / secrets. Values below are typical **pro
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `API_BASE_URL` | Yes for production | Full base URL including **`/api`**, e.g. `https://your-app.onrender.com/api`. |
+| `GOOGLE_SERVER_CLIENT_ID` | Yes for Android Google Sign-In | OAuth server client ID required at build time for Android Google login. |
 
 See [infra/.env.example](infra/.env.example) for copy-paste names and comments.
 
@@ -244,7 +246,8 @@ From **`app/`**, replace the URL with your **HTTPS** API base (must include the 
 cd app
 flutter pub get
 flutter build apk --release \
-  --dart-define=API_BASE_URL=https://your-api-host.example.com/api
+  --dart-define=API_BASE_URL=https://your-api-host.example.com/api \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
 ```
 
 APK output: `app/build/app/outputs/flutter-apk/app-release.apk`.
@@ -254,7 +257,8 @@ APK output: `app/build/app/outputs/flutter-apk/app-release.apk`.
 ```bash
 cd app
 flutter build appbundle --release \
-  --dart-define=API_BASE_URL=https://your-api-host.example.com/api
+  --dart-define=API_BASE_URL=https://your-api-host.example.com/api \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
 ```
 
 AAB output: `app/build/app/outputs/bundle/release/app-release.aab`.
