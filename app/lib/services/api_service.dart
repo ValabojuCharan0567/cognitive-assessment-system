@@ -10,8 +10,8 @@ class ApiService {
     defaultValue: 'http://127.0.0.1:8000/api',
   );
 
-  /// Large JSON + ML on the server (e.g. `/audio/analyze`) can take minutes.
-  static const Duration _heavyRequestTimeout = Duration(seconds: 300);
+  /// Large JSON + ML on the server (e.g. `/audio/analyze`) can take many minutes.
+  static const Duration _heavyRequestTimeout = Duration(minutes: 10);
   static const Duration _healthCheckTimeout = Duration(seconds: 6);
   final Dio _dio = Dio();
 
