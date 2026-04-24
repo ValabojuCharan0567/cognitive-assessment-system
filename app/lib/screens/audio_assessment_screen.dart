@@ -589,7 +589,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
         // Cache the result
         if (_selectedAudioFingerprint != null) {
           try {
-            await AudioCacheService.cacheAnalysisResult(
+            await AudioCacheService.cacheAnalysis(
                 _selectedAudioFingerprint!, audioAnalysis);
             debugPrint(
                 '[AUDIO] Cached analysis result for fingerprint=$_selectedAudioFingerprint');
