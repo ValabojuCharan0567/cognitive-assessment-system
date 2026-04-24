@@ -32,7 +32,12 @@ def load_credentials(client_secrets_path: Path, token_path: Path) -> Credentials
         )
 
     flow = InstalledAppFlow.from_client_secrets_file(str(client_secrets_path), SCOPES)
-    creds = flow.run_local_server(port=0)
+    try:
+        creds = flow.run_local_server(port=0)
+    except Exception as exc:
+        print('Local OAuth redirect failed. Falling back to console auth.')
+        print(f'Error: {exc}')
+        creds = flow.run_console()
 
     token_path.write_text(creds.to_json())
     print(f'Wrote OAuth token to: {token_path}')
