@@ -871,64 +871,86 @@ def login():
 @app.route("/login/google", methods=["POST"])
 @app.route("/auth/google", methods=["POST"])
 def google_login():
-    data = request.get_json(force=True)
-    id_token_str = str(data.get("id_token") or "").strip()
-    access_token = str(data.get("access_token") or "").strip()
+    request_id = _request_id()
+    try:
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"error": "Invalid JSON body.", "request_id": request_id}), 400
 
-    if not id_token_str and not access_token:
-        return jsonify({"error": "id_token or access_token is required"}), 400
+        id_token_str = str(data.get("id_token") or "").strip()
+        access_token = str(data.get("access_token") or "").strip()
 
-    email = ""
-    name = None
-    email_verified = False
+        if not id_token_str and not access_token:
+            return jsonify(
+                {"error": "id_token or access_token is required", "request_id": request_id}
+            ), 400
 
-    if id_token_str:
-        if google_id_token is None or google_requests is None:
-            return jsonify({"error": "Google token verification dependencies are not installed."}), 500
-        try:
-            audience = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip() or None
-            google_session = requests.Session()
-            google_session.verify = certifi.where()
-            token_info = google_id_token.verify_oauth2_token(
-                id_token_str,
-                google_requests.Request(session=google_session),
-                audience=audience,
-            )
-            issuer = str(token_info.get("iss") or "")
-            if issuer not in {"accounts.google.com", "https://accounts.google.com"}:
-                return jsonify({"error": "Invalid Google token issuer."}), 401
-            email = _normalize_email(token_info.get("email"))
-            name = token_info.get("name")
-            email_verified = bool(token_info.get("email_verified"))
-        except Exception as exc:
-            return jsonify({"error": f"Invalid Google id_token: {exc}"}), 401
+        email = ""
+        name = None
+        email_verified = False
 
-    if not email and access_token:
-        try:
-            info = _google_userinfo_from_access_token(access_token)
-            email = _normalize_email(info.get("email"))
-            name = info.get("name")
-            email_verified = bool(info.get("email_verified"))
-        except urllib_error.HTTPError as exc:
-            return jsonify({"error": f"Invalid Google access_token: {exc.code}"}), 401
-        except Exception as exc:
-            return jsonify({"error": f"Failed to validate Google access_token: {exc}"}), 401
+        if id_token_str:
+            if google_id_token is None or google_requests is None:
+                return jsonify(
+                    {
+                        "error": "Google token verification dependencies are not installed.",
+                        "request_id": request_id,
+                    }
+                ), 500
+            try:
+                audience = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip() or None
+                google_session = requests.Session()
+                google_session.verify = certifi.where()
+                token_info = google_id_token.verify_oauth2_token(
+                    id_token_str,
+                    google_requests.Request(session=google_session),
+                    audience=audience,
+                )
+                issuer = str(token_info.get("iss") or "")
+                if issuer not in {"accounts.google.com", "https://accounts.google.com"}:
+                    return jsonify({"error": "Invalid Google token issuer.", "request_id": request_id}), 401
+                email = _normalize_email(token_info.get("email"))
+                name = token_info.get("name")
+                email_verified = bool(token_info.get("email_verified"))
+            except Exception as exc:
+                return jsonify({"error": f"Invalid Google id_token: {exc}", "request_id": request_id}), 401
 
-    if not email:
-        return jsonify({"error": "Google account email is missing."}), 400
-    if not email_verified:
-        return jsonify({"error": "Google account email is not verified."}), 403
+        if not email and access_token:
+            try:
+                info = _google_userinfo_from_access_token(access_token)
+                email = _normalize_email(info.get("email"))
+                name = info.get("name")
+                email_verified = bool(info.get("email_verified"))
+            except urllib_error.HTTPError as exc:
+                return jsonify(
+                    {"error": f"Invalid Google access_token: {exc.code}", "request_id": request_id}
+                ), 401
+            except Exception as exc:
+                return jsonify(
+                    {"error": f"Failed to validate Google access_token: {exc}", "request_id": request_id}
+                ), 401
 
-    _upsert_google_user(email, name)
-    accounts = _get_child_accounts_for_parent(email)
-    return jsonify(
-        {
-            "message": "login successful",
-            "provider": "google",
-            "accounts": accounts,
-            "user": {"email": email, "name": name},
-        }
-    )
+        if not email:
+            return jsonify({"error": "Google account email is missing.", "request_id": request_id}), 400
+        if not email_verified:
+            return jsonify(
+                {"error": "Google account email is not verified.", "request_id": request_id}
+            ), 403
+
+        _upsert_google_user(email, name)
+        accounts = _get_child_accounts_for_parent(email)
+        return jsonify(
+            {
+                "message": "login successful",
+                "provider": "google",
+                "accounts": accounts,
+                "user": {"email": email, "name": name},
+                "request_id": request_id,
+            }
+        )
+    except Exception as exc:
+        logger.exception("[REQ %s] google_login unexpected error: %s", request_id, exc)
+        return jsonify({"error": "Google login failed unexpectedly.", "request_id": request_id}), 500
 
 
 @app.route("/api/child", methods=["POST"])
