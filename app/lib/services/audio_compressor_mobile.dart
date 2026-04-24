@@ -11,6 +11,16 @@ Future<CompressedAudioPayload> compressForUpload(
   required String inputExt,
 }) async {
   final normalizedExt = inputExt.trim().toLowerCase();
+
+  // Skip compression for smaller audio payloads to reduce latency.
+  if (bytes.lengthInBytes < 1 * 1024 * 1024) {
+    return CompressedAudioPayload(
+      bytes: bytes,
+      ext: normalizedExt,
+      wasCompressed: false,
+    );
+  }
+
   final tempDir = await Directory.systemTemp.createTemp('neuro_ai_audio_compress_');
   final inputPath = '${tempDir.path}/input.$normalizedExt';
   final outputPath = '${tempDir.path}/output.m4a';
@@ -22,7 +32,7 @@ Future<CompressedAudioPayload> compressForUpload(
 
     final session = await FFmpegKit.execute(
       '-y -i ${_quote(inputPath)} '
-      '-vn -ac 1 -ar 16000 -b:a 64k -c:a aac '
+      '-ac 1 -ar 16000 -b:a 32k -c:a aac -preset ultrafast '
       '${_quote(outputPath)}',
     );
     final returnCode = await session.getReturnCode();

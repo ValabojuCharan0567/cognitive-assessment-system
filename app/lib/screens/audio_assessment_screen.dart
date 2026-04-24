@@ -482,7 +482,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       _loading = true;
       _error = null;
       _uploadProgress = null;
-      _uploadStatus = 'Preparing audio...';
+      _uploadStatus = 'Processing your speech...';
       _phase = AudioPhase.uploading;
     });
 
