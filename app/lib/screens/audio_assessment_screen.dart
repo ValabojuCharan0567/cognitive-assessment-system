@@ -15,7 +15,9 @@ import '../services/audio_service_mobile.dart'
 
 import '../services/audio_compressor.dart';
 import '../services/api_service.dart';
+import '../services/audio_cache_service.dart';
 import '../theme/app_design.dart';
+import '../widgets/audio_analysis_progress_widget.dart';
 
 Map<String, dynamic> _buildAudioPreprocessingInBackground(
   Map<String, dynamic> args,
@@ -157,10 +159,13 @@ enum AudioPhase { idle, uploading, analyzing, done, error }
 
 class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
   static const Duration _analysisCooldown = Duration(seconds: 3);
+  static const Duration _analysisTimeout = Duration(seconds: 35);
+  static const int _maxRetries = 2;
 
   // For recording timer
   Timer? _recordTimer;
   int _recordSeconds = 0;
+  int _retryCount = 0;
   final _api = ApiService();
   final AudioService _audioService = AudioService();
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -184,10 +189,12 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
   String? _uploadStatus;
   CancelToken? _audioUploadCancelToken;
   AudioPhase _phase = AudioPhase.idle;
+  AudioAnalysisStage _stage = AudioAnalysisStage.idle;
   String? _activeRequestId;
   String? _selectedAudioFingerprint;
   String? _lastAnalyzedFingerprint;
   DateTime? _lastAnalysisAttemptAt;
+  bool _wasLoadedFromCache = false;
 
   bool get _hasValidAudioAnalysis {
     final analysis = _audioAnalysis;
@@ -371,6 +378,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
         _lastAnalyzedFingerprint = null;
         _audioAnalysis = null;
         _phase = AudioPhase.idle;
+        _stage = AudioAnalysisStage.idle;
       });
       if (bytes != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -431,6 +439,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
           _selectedAudioFingerprint = fingerprint;
           _lastAnalyzedFingerprint = null;
           _phase = AudioPhase.idle;
+          _stage = AudioAnalysisStage.idle;
         });
       }
     } catch (e) {
@@ -468,13 +477,40 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       return;
     }
 
+    // Check for cached result first
+    final fingerprint = _selectedAudioFingerprint;
+    if (fingerprint != null) {
+      final cached =
+          await AudioCacheService.getCachedAnalysis(fingerprint);
+      if (cached != null && mounted) {
+        debugPrint('[AUDIO] Loaded cached analysis for fingerprint=$fingerprint');
+        setState(() {
+          _audioAnalysis = cached;
+          _wasLoadedFromCache = true;
+          _error = null;
+          _phase = AudioPhase.done;
+          _stage = AudioAnalysisStage.cached;
+          _lastAnalyzedFingerprint = fingerprint;
+          _loading = false;
+        });
+        // Show brief cache indicator
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (mounted) {
+          setState(() {
+            _stage = AudioAnalysisStage.idle;
+          });
+        }
+        return;
+      }
+    }
+
     _analysisInFlight = true;
     _lastAnalysisAttemptAt = DateTime.now();
     _audioUploadCancelToken = CancelToken();
+    _retryCount = 0;
     final requestId = _buildRequestId(childId);
     _activeRequestId = requestId;
 
-    // Debug trace for flow and state
     debugPrint(
         '[AUDIO] Running analysis requestId=$requestId childId=$childId, bytes=${_audioBytes?.length}');
 
@@ -482,8 +518,10 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       _loading = true;
       _error = null;
       _uploadProgress = null;
-      _uploadStatus = 'Processing your speech...';
+      _uploadStatus = null;
+      _wasLoadedFromCache = false;
       _phase = AudioPhase.uploading;
+      _stage = AudioAnalysisStage.uploading;
     });
 
     try {
@@ -493,6 +531,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
         setState(() => _error = 'Audio recording is too short. Please record or upload a clearer, longer sample.');
         return;
       }
+
       final ext = _audioExt ?? 'wav';
       final devicePreprocessing =
           await compute(_buildAudioPreprocessingInBackground, {
@@ -516,56 +555,57 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       }
 
       if (!mounted) return;
-      setState(() {
-        _uploadStatus = 'Uploading audio...';
-        _phase = AudioPhase.uploading;
-      });
 
-      final audioAnalysis = await _api.analyzeAudio(
+      // Attempt analysis with timeout and retry logic
+      final audioAnalysis = await _performAnalysisWithRetry(
         childId,
-        uploadPayload.bytes,
-        ext: uploadPayload.ext,
-        devicePreprocessing: devicePreprocessing,
-        requestId: requestId,
-        cancelToken: _audioUploadCancelToken,
-        onSendProgress: (sent, total) {
-          if (!mounted) return;
-          final progress = total > 0 ? sent / total : null;
-          final isUploadDone = progress != null && progress >= 0.999;
-          setState(() {
-            _uploadProgress = progress?.clamp(0.0, 1.0);
-            _uploadStatus = isUploadDone ? 'Analyzing audio...' : 'Uploading audio...';
-            _phase = isUploadDone ? AudioPhase.analyzing : AudioPhase.uploading;
-          });
-        },
+        uploadPayload,
+        devicePreprocessing,
+        requestId,
       );
 
       if (!mounted) return;
       setState(() {
         _uploadProgress = 1.0;
-        _uploadStatus = 'Analyzing audio...';
         _phase = AudioPhase.analyzing;
-        if (audioAnalysis['valid'] == false ||
-            audioAnalysis['silence_detected'] == true) {
-          _audioAnalysis = null;
-          _error = (audioAnalysis['error'] ??
-                  'No speech detected. Please speak clearly and try again.')
-              .toString();
-          _phase = AudioPhase.error;
-        } else {
-          _audioAnalysis = audioAnalysis;
-          _error = null;
-          _phase = AudioPhase.done;
-          _lastAnalyzedFingerprint = _selectedAudioFingerprint;
-        }
+        _stage = AudioAnalysisStage.generating;
       });
+
+      if (audioAnalysis['valid'] == false ||
+          audioAnalysis['silence_detected'] == true) {
+        _audioAnalysis = null;
+        _error = (audioAnalysis['error'] ??
+                'No speech detected. Please speak clearly and try again.')
+            .toString();
+        _phase = AudioPhase.error;
+        _stage = AudioAnalysisStage.error;
+      } else {
+        _audioAnalysis = audioAnalysis;
+        _error = null;
+        _phase = AudioPhase.done;
+        _stage = AudioAnalysisStage.done;
+        _lastAnalyzedFingerprint = _selectedAudioFingerprint;
+
+        // Cache the result
+        if (_selectedAudioFingerprint != null) {
+          try {
+            await AudioCacheService.cacheAnalysisResult(
+                _selectedAudioFingerprint!, audioAnalysis);
+            debugPrint(
+                '[AUDIO] Cached analysis result for fingerprint=$_selectedAudioFingerprint');
+          } catch (e) {
+            debugPrint('[AUDIO] Failed to cache result: $e');
+          }
+        }
+      }
     } catch (e) {
       setState(() {
         _audioAnalysis = null;
-        _error = _friendlyError(e);
+        _error = _mapErrorMessage(e);
         _phase = _error == 'Audio upload cancelled.'
             ? AudioPhase.idle
             : AudioPhase.error;
+        _stage = AudioAnalysisStage.error;
       });
     } finally {
       _audioUploadCancelToken = null;
@@ -581,12 +621,163 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
     }
   }
 
+  Future<Map<String, dynamic>> _performAnalysisWithRetry(
+    String childId,
+    dynamic uploadPayload,
+    Map<String, dynamic> devicePreprocessing,
+    String requestId,
+  ) async {
+    int attempt = 0;
+
+    while (attempt <= _maxRetries) {
+      attempt++;
+      debugPrint('[AUDIO] Attempt $attempt/${_maxRetries + 1}');
+
+      try {
+        if (!mounted) return {};
+        setState(() {
+          _phase = AudioPhase.uploading;
+          _stage = AudioAnalysisStage.uploading;
+        });
+
+        final audioAnalysis = await _api
+            .analyzeAudio(
+          childId,
+          uploadPayload.bytes,
+          ext: uploadPayload.ext,
+          devicePreprocessing: devicePreprocessing,
+          requestId: requestId,
+          cancelToken: _audioUploadCancelToken,
+          onSendProgress: (sent, total) {
+            if (!mounted) return;
+            final progress = total > 0 ? sent / total : null;
+            final isUploadDone = progress != null && progress >= 0.999;
+            setState(() {
+              _uploadProgress = progress?.clamp(0.0, 1.0);
+              _phase = isUploadDone ? AudioPhase.analyzing : AudioPhase.uploading;
+              _stage = isUploadDone
+                  ? AudioAnalysisStage.analyzing
+                  : AudioAnalysisStage.uploading;
+            });
+          },
+        )
+            .timeout(
+          _analysisTimeout,
+          onTimeout: () => throw TimeoutException(
+              'Analysis took too long (${_analysisTimeout.inSeconds}s)'),
+        );
+
+        return audioAnalysis;
+      } on TimeoutException catch (e) {
+        debugPrint('[AUDIO] Timeout on attempt $attempt: $e');
+        if (attempt > _maxRetries) {
+          rethrow;
+        }
+
+        // Show retry dialog
+        if (mounted) {
+          final shouldRetry = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Server Busy'),
+              content: const Text(
+                  'The analysis took too long. Would you like to try again?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldRetry != true) {
+            throw e;
+          }
+        } else {
+          rethrow;
+        }
+      } on DioException catch (e) {
+        if (e.type == DioExceptionType.cancel) {
+          rethrow;
+        }
+        debugPrint('[AUDIO] DioException on attempt $attempt: $e');
+        if (attempt > _maxRetries) {
+          rethrow;
+        }
+
+        // Show retry dialog for other errors
+        if (mounted) {
+          final shouldRetry = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Network Issue'),
+              content: Text(
+                  'Failed to analyze (attempt $attempt/${ _maxRetries + 1}). Retry?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldRetry != true) {
+            rethrow;
+          }
+        } else {
+          rethrow;
+        }
+      }
+    }
+
+    return {};
+  }
+
+  String _mapErrorMessage(Object error) {
+    if (error is TimeoutException) {
+      return 'Analysis took too long. Check your internet and try again.';
+    }
+
+    if (error is DioException) {
+      if (error.type == DioExceptionType.cancel) {
+        return 'Audio upload cancelled.';
+      }
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 502 || statusCode == 503) {
+        return 'Server is busy. Please try again in a moment.';
+      }
+      if (statusCode == 408) {
+        return 'Request timed out. Please try again.';
+      }
+      if (statusCode == null) {
+        // Network error
+        return 'Network error. Check your connection and try again.';
+      }
+      return 'Server error ($statusCode). Please try again.';
+    }
+
+    return _friendlyError(error);
+  }
+
   void _cancelAudioUpload() {
     _audioUploadCancelToken?.cancel('User cancelled audio upload.');
     setState(() {
       _uploadProgress = 0.0;
       _uploadStatus = null;
       _phase = AudioPhase.idle;
+      _stage = AudioAnalysisStage.idle;
     });
   }
 
@@ -1074,33 +1265,15 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
             ],
             const SizedBox(height: 20),
             if (_loading) ...[
-              Center(
-                child: Column(
-                  children: [
-                    if (_uploadProgress != null) ...[
-                      LinearProgressIndicator(value: _uploadProgress),
-                      const SizedBox(height: 10),
-                    ] else
-                      const CircularProgressIndicator(),
-                    const SizedBox(height: 10),
-                    Text(_statusText.isNotEmpty ? _statusText : (_uploadStatus ?? 'Working...')),
-                    if (_activeRequestId != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        'Request ID: $_activeRequestId',
-                        style: const TextStyle(fontSize: 11, color: Colors.white70),
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    OutlinedButton.icon(
-                      onPressed: _audioUploadCancelToken == null
-                          ? null
-                          : _cancelAudioUpload,
-                      icon: const Icon(Icons.close),
-                      label: const Text('Cancel'),
-                    ),
-                  ],
-                ),
+              AudioAnalysisProgressWidget(
+                stage: _stage,
+                uploadProgress: _uploadProgress,
+                customMessage: _wasLoadedFromCache
+                    ? 'Loading from cache...'
+                    : null,
+                onCancel: _audioUploadCancelToken == null
+                    ? null
+                    : _cancelAudioUpload,
               ),
             ],
             if (!_loading)
