@@ -50,7 +50,7 @@ data/*
 test_audio_samples/
 test_eeg_samples/
 test_eeg_samples_csv_backup/
-# Ignore EDF/WAV globally except under bundled data/ (for Render + full ML)
+# Ignore EDF/WAV globally except under bundled data/ (for Railway + full ML)
 *.edf
 !data/EEG/**/*.edf
 *.wav

@@ -78,7 +78,7 @@ Use the repo wrapper so the Android Google sign-in client ID is always included:
 ```bash
 cd '/Users/charanvalaboju/valaboju charan/Cognitive Assessment System'
 ./scripts/build_release_apk.sh \
-  --api-url=https://your-app.onrender.com/api \
+  --api-url=https://your-app.up.railway.app/api \
   --google-server-client-id=994631611469-h0rrsme268j2f4h5t92kbpdb3hc75n34.apps.googleusercontent.com
 ```
 
@@ -148,7 +148,7 @@ Cognitive-Assessment-System/
 
 ## 📊 Dataset Setup
 
-See **[data/README.md](data/README.md)** for layout (`EEG/`, `speech_data/`), the repo **`data/`** bundle for Docker/Render, and the gitignored **`Dataset/`** convention.
+See **[data/README.md](data/README.md)** for layout (`EEG/`, `speech_data/`), the repo **`data/`** bundle for Docker/Railway, and the gitignored **`Dataset/`** convention.
 
 **Local default** (large data usually outside the clone):
 
@@ -162,7 +162,7 @@ Override:
 export DATASET_PATH="/path/to/folder/with/EEG/and/speech_data"
 ```
 
-**Docker / Render:** `backend/Dockerfile` copies **`data/`** → `/workspace/data` and sets `DATASET_PATH`. That directory must exist in the repo for `docker build` to succeed.
+**Docker / Railway:** `backend/Dockerfile` copies **`data/`** → `/workspace/data` and sets `DATASET_PATH`. That directory must exist in the repo for `docker build` to succeed.
 
 The backend reads `DATASET_PATH` through `backend/config/config.py`.
 

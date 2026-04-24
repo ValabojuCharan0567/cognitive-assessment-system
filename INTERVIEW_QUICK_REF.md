@@ -2,7 +2,7 @@
 
 ## The Story in 2 Minutes
 
-**Problem**: Audio analysis requests timeout and abort on Render free tier (30% failure rate).
+**Problem**: Audio analysis requests timeout and abort on Railway free tier (30% failure rate).
 
 **Root Cause**: Feature extraction used computationally expensive operations:
 - Tonnetz (tonal analysis) = 200ms
@@ -15,7 +15,7 @@
 2. **Feature Count**: 429 → 252 (40% reduction)
 3. **Speed**: ~3-5s → ~1-2s extraction
 4. **Model Retrain**: Retrained XGBoost on new 252 features with 326 labeled samples
-5. **Production Fix**: Added health check before requests (Render cold-start)
+5. **Production Fix**: Added health check before requests (Railway cold-start)
 
 **Results**:
 - ✅ Processing time: 2-3 seconds (down from 5-10s)
@@ -97,7 +97,7 @@
 
 ## Don't Forget to Mention
 
-✅ This is a **real production system** (deployed on Render, Flutter app)
+✅ This is a **real production system** (deployed on Railway, Flutter app)
 ✅ **Full codebase** is available (can show GitHub)
 ✅ **Measured impact** (before/after metrics)
 ✅ **Iterative improvement** (not one-shot fix)
@@ -111,7 +111,7 @@
 - [ ] Understand why retraining was necessary
 - [ ] Know the trade-offs (accuracy vs. latency)
 - [ ] Can discuss data imbalance issue
-- [ ] Ready to explain Render's constraints
+- [ ] Ready to explain Railway's constraints
 - [ ] Can show the actual code/model files
 - [ ] Have before/after metrics ready
 - [ ] Understand full audio pipeline

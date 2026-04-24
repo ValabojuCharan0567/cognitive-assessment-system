@@ -5,7 +5,7 @@
 ```
 User Records Audio (2-3 seconds)
         ↓
-[Upload to Render] (100ms)
+[Upload to Railway] (100ms)
         ↓
 [Decode Audio] (500ms)
         ↓
@@ -43,7 +43,7 @@ User Records Audio (2-3 seconds)
         ↓
 [Health Check] (quick ping) ← NEW!
         ↓
-[Upload to Render] (100ms)
+[Upload to Railway] (100ms)
         ↓
 [Decode Audio] (500ms)
         ↓
@@ -193,7 +193,7 @@ New Model (252 features):
            "confidence": 0.85
          }
 
-Deployment: Render free tier
+Deployment: Railway free tier
 Database: SQLite
 Total latency: 2-3 seconds ✓
 ```

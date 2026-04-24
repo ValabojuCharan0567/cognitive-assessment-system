@@ -22,7 +22,7 @@ Optional (used by some **`ml/`** scripts, not by the live Flask `validate_datase
 
 | Where | Path | Git |
 |--------|------|-----|
-| **Docker / Render (bundled)** | Image: `/workspace/data` from repo **`data/`** | Commit small `EEG/` + `speech_data/` subsets under GitHub size limits |
+| **Docker / Railway (bundled)** | Image: `/workspace/data` from repo **`data/`** | Commit small `EEG/` + `speech_data/` subsets under GitHub size limits |
 | **Local (default)** | `$HOME/Datasets/CognitiveAssessment` | Not in repo; set `DATASET_PATH` if you use another folder |
 | **Legacy local folder name** | `./Dataset/` at repo root | **Gitignored** — convenience only; same role as any external `DATASET_PATH` |
 
@@ -39,7 +39,7 @@ ENV DATASET_PATH=/workspace/data
 
 So the **repo directory `data/`** must exist (even if only empty `EEG/` + `speech_data/` with placeholders) or the **image build fails**.
 
-## Render
+## Railway
 
 Usually **no extra env** is needed; the Dockerfile sets `DATASET_PATH`. Override only if you change the image layout.
 

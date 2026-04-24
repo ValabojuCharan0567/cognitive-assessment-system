@@ -2,7 +2,7 @@
 
 ## 🎯 The Situation (Setup - 30 seconds)
 
-I was working on a **cognitive assessment mobile app** that analyzes user speech to evaluate cognitive load (low/medium/high). The system processes audio in real-time through a Flask backend deployed on Render's free tier.
+I was working on a **cognitive assessment mobile app** that analyzes user speech to evaluate cognitive load (low/medium/high). The system processes audio in real-time through a Flask backend deployed on Railway's free tier.
 
 We discovered a critical production issue: **users experienced frequent connection timeouts and "HttpSoftware caused connection abort" errors** when trying to analyze their speech.
 
@@ -18,7 +18,7 @@ We discovered a critical production issue: **users experienced frequent connecti
 ### Root Cause Analysis
 I traced the issue through:
 1. **Local testing** - Found that audio analysis took 5+ seconds (acceptable)
-2. **Render monitoring** - Saw CPU spikes to 100% during requests
+2. **Railway monitoring** - Saw CPU spikes to 100% during requests
 3. **Feature extraction code review** - Discovered we were computing:
    - Tonality analysis (tonnetz)
    - Pitch tracking using YIN algorithm  
@@ -26,7 +26,7 @@ I traced the issue through:
    - Mel-spectrograms + chroma features
    - Spectral contrast across multiple bands
 
-These operations are **computationally expensive**, and on Render's free tier (limited CPU), the requests would timeout and abort.
+These operations are **computationally expensive**, and on Railway's free tier (limited CPU), the requests would timeout and abort.
 
 ### The Real Issue
 ```
@@ -72,7 +72,7 @@ I:
 4. Achieved ~43% accuracy on holdout set (acceptable for this stage - more data needed later)
 
 ### Step 3: Production Stability
-For Render's cold-start behavior, I added:
+For Railway's cold-start behavior, I added:
 ```dart
 // In Flutter before heavy requests
 await checkHealth();  // Wake server before uploading
@@ -132,7 +132,7 @@ Total Response:       ~1.7-2.7s ✅
 - Model retraining & feature alignment
 
 ### 3. **Production Thinking**
-- Considers deployment platform limitations (Render free tier)
+- Considers deployment platform limitations (Railway free tier)
 - Knows the difference between research vs. production code
 - Adds operational fixes (health checks)
 
@@ -179,7 +179,7 @@ Total Response:       ~1.7-2.7s ✅
 - **Backend**: Flask, Python, librosa (audio processing)
 - **ML**: XGBoost, scikit-learn (training), joblib (model serialization)
 - **Mobile**: Flutter, Dart
-- **Deployment**: Render (free tier), HTTPS with custom SSL
+- **Deployment**: Railway (free tier), HTTPS with custom SSL
 - **Tools**: numpy, pandas, git
 
 ---
@@ -189,7 +189,7 @@ Total Response:       ~1.7-2.7s ✅
 "This project taught me:
 1. **Premature optimization is bad**, but measuring bottlenecks is essential
 2. **Feature engineering > fancy algorithms** (removing features was bigger impact than tuning hyperparameters)
-3. **Deployment constraints shape design** (free-tier Render forced us to be efficient)
+3. **Deployment constraints shape design** (free-tier Railway forced us to be efficient)
 4. **Retraining is part of iteration** (you can't just swap features without retraining)
 5. **Cross-functional work** (I touched iOS/Android build, backend, ML, ops)"
 
