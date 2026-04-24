@@ -30,9 +30,17 @@ EOF
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --api-url=*)
+      API_URL="${1#*=}"
+      shift
+      ;;
     --api-url)
       API_URL="$2"
       shift 2
+      ;;
+    --google-server-client-id=*)
+      GOOGLE_SERVER_CLIENT_ID="${1#*=}"
+      shift
       ;;
     --google-server-client-id)
       GOOGLE_SERVER_CLIENT_ID="$2"
