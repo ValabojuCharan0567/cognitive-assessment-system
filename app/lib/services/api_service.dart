@@ -15,6 +15,18 @@ class ApiService {
   static const Duration _healthCheckTimeout = Duration(seconds: 6);
   final Dio _dio = Dio();
 
+  ApiService() {
+    _dio.options.validateStatus = (_) => true;
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onError: (DioException error, ErrorInterceptorHandler handler) {
+          debugPrint('[API] DioException: ${error.message}');
+          handler.next(error);
+        },
+      ),
+    );
+  }
+
   String get baseUrl => _kBaseUrl;
 
   String _requestId(String prefix, [String? provided]) {
@@ -22,6 +34,36 @@ class ApiService {
     if (value.isNotEmpty) return value;
     final ts = DateTime.now().toUtc().microsecondsSinceEpoch;
     return '$prefix-$ts';
+  }
+
+  String _extractServerMessage(dynamic responseData, [String fallback = 'Server error']) {
+    if (responseData is Map<String, dynamic>) {
+      return responseData['message']?.toString().trim() ??
+          responseData['error']?.toString().trim() ??
+          fallback;
+    }
+
+    if (responseData is String) {
+      final trimmed = responseData.trim();
+      if (trimmed.isNotEmpty) return trimmed;
+    }
+
+    return fallback;
+  }
+
+  String _mapStatusCodeMessage(int statusCode, String message) {
+    switch (statusCode) {
+      case 502:
+        return 'Server temporarily unavailable. Please try again in a moment.';
+      case 500:
+        return 'Server error. Please try again later.';
+      case 408:
+        return 'Request timed out. Check your connection and try again.';
+      case 404:
+        return 'Requested resource not found.';
+      default:
+        return message;
+    }
   }
 
   Future<http.Response> _postJsonLong(
@@ -230,22 +272,11 @@ class ApiService {
 
     final statusCode = response.statusCode ?? 0;
     final statusMessage = response.statusMessage?.trim();
-    var message = 'Server error';
-
-    if (response.data is Map<String, dynamic>) {
-      final data = response.data as Map<String, dynamic>;
-      message = data['message']?.toString() ??
-          data['error']?.toString() ??
-          message;
-    } else if (response.data is String && response.data.toString().trim().isNotEmpty) {
-      message = response.data.toString().trim();
-    } else if (statusMessage?.isNotEmpty == true) {
-      message = statusMessage!;
-    }
-
-    if (statusCode == 502) {
-      message = 'Server temporarily unavailable. Please try again in a moment.';
-    }
+    final rawMessage = _extractServerMessage(
+      response.data,
+      statusMessage?.isNotEmpty == true ? statusMessage! : 'Server error',
+    );
+    final message = _mapStatusCodeMessage(statusCode, rawMessage);
 
     throw Exception('Audio analysis failed ($statusCode): $message');
   }
