@@ -4,6 +4,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "cd backend && python api/app.py"
+    "startCommand": "cd backend && gunicorn api.app:app --bind 0.0.0.0:$PORT"
   }
 }
