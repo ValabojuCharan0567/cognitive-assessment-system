@@ -185,9 +185,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
   bool _isPickingAudio = false;
   bool _analysisInFlight = false;
   double? _uploadProgress;
-  String? _uploadStatus;
   CancelToken? _audioUploadCancelToken;
-  AudioPhase _phase = AudioPhase.idle;
   AudioAnalysisStage _stage = AudioAnalysisStage.idle;
   String? _selectedAudioFingerprint;
   String? _lastAnalyzedFingerprint;
@@ -352,7 +350,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
         }
         _lastAnalyzedFingerprint = null;
         _audioAnalysis = null;
-        _phase = AudioPhase.idle;
         _stage = AudioAnalysisStage.idle;
       });
       if (bytes != null && mounted) {
@@ -413,7 +410,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
           _audioAnalysis = null;
           _selectedAudioFingerprint = fingerprint;
           _lastAnalyzedFingerprint = null;
-          _phase = AudioPhase.idle;
           _stage = AudioAnalysisStage.idle;
         });
       }
@@ -463,7 +459,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
           _audioAnalysis = cached;
           _wasLoadedFromCache = true;
           _error = null;
-          _phase = AudioPhase.done;
           _stage = AudioAnalysisStage.cached;
           _lastAnalyzedFingerprint = fingerprint;
           _loading = false;
@@ -491,9 +486,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       _loading = true;
       _error = null;
       _uploadProgress = null;
-      _uploadStatus = null;
       _wasLoadedFromCache = false;
-      _phase = AudioPhase.uploading;
       _stage = AudioAnalysisStage.uploading;
     });
 
@@ -540,7 +533,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       if (!mounted) return;
       setState(() {
         _uploadProgress = 1.0;
-        _phase = AudioPhase.analyzing;
         _stage = AudioAnalysisStage.generating;
       });
 
@@ -550,12 +542,10 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
         _error = (audioAnalysis['error'] ??
                 'No speech detected. Please speak clearly and try again.')
             .toString();
-        _phase = AudioPhase.error;
         _stage = AudioAnalysisStage.error;
       } else {
         _audioAnalysis = audioAnalysis;
         _error = null;
-        _phase = AudioPhase.done;
         _stage = AudioAnalysisStage.done;
         _lastAnalyzedFingerprint = _selectedAudioFingerprint;
 
@@ -575,9 +565,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       setState(() {
         _audioAnalysis = null;
         _error = _mapErrorMessage(e);
-        _phase = _error == 'Audio upload cancelled.'
-            ? AudioPhase.idle
-            : AudioPhase.error;
         _stage = AudioAnalysisStage.error;
       });
     } finally {
@@ -587,7 +574,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
         setState(() {
           _loading = false;
           _uploadProgress = null;
-          _uploadStatus = null;
         });
       }
     }
@@ -608,7 +594,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       try {
         if (!mounted) return {};
         setState(() {
-          _phase = AudioPhase.uploading;
           _stage = AudioAnalysisStage.uploading;
         });
 
@@ -626,7 +611,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
             final isUploadDone = progress != null && progress >= 0.999;
             setState(() {
               _uploadProgress = progress?.clamp(0.0, 1.0);
-              _phase = isUploadDone ? AudioPhase.analyzing : AudioPhase.uploading;
               _stage = isUploadDone
                   ? AudioAnalysisStage.analyzing
                   : AudioAnalysisStage.uploading;
@@ -669,7 +653,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
           );
 
           if (shouldRetry != true) {
-            throw e;
+            rethrow;
           }
         } else {
           rethrow;
@@ -747,8 +731,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
     _audioUploadCancelToken?.cancel('User cancelled audio upload.');
     setState(() {
       _uploadProgress = 0.0;
-      _uploadStatus = null;
-      _phase = AudioPhase.idle;
       _stage = AudioAnalysisStage.idle;
     });
   }
