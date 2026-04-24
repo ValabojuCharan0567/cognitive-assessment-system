@@ -346,7 +346,8 @@ class ApiService {
 
   // Get children for parent
   Future<List<dynamic>> getChildrenForParent(String email) async {
-    final url = Uri.parse("$baseUrl/children/by_parent/$email");
+    final encodedEmail = Uri.encodeComponent(email.trim());
+    final url = Uri.parse("$baseUrl/children/by_parent/$encodedEmail");
     final response = await http.get(url);
 
     if (response.statusCode == 200) {

@@ -2117,9 +2117,16 @@ def submit_behavioral_results():
 
 @app.route("/api/children/by_parent/<email>", methods=["GET"])
 def get_children_by_parent(email: str):
-    email = _normalize_email(email)
-    children = _get_child_accounts_for_parent(email)
-    return jsonify(children)
+    request_id = _request_id()
+    try:
+        email = _normalize_email(email)
+        if not email:
+            return jsonify({"error": "parent email is required", "request_id": request_id}), 400
+        children = _get_child_accounts_for_parent(email)
+        return jsonify(children)
+    except Exception as exc:
+        logger.exception("[REQ %s] get_children_by_parent failed: %s", request_id, exc)
+        return jsonify({"error": "Failed to fetch children.", "request_id": request_id}), 500
 
 
 if __name__ == "__main__":
