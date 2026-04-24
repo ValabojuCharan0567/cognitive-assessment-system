@@ -13,7 +13,7 @@ This complements [README.md](README.md) and [docs/secure_deployment.md](docs/sec
    ```bash
    flutter build apk --release \
      --dart-define=API_BASE_URL=https://YOUR_HOST/api \
-     --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
+     --dart-define=GOOGLE_SERVER_CLIENT_ID=994631611469-2kpjm64eifo6gqd9rum9sg5iecjrvr71.apps.googleusercontent.com
    ```
 5. Install the APK (Drive, Telegram, etc.) and test on a device **off your dev Wi‑Fi** if possible.
 
@@ -21,7 +21,7 @@ If something fails → **[Common failures & fixes](#common-failures--fixes)**. F
 
 ## Why `http://192.168.x.x:8000/api` is not enough
 
-That address only works on **your LAN** (same Wi‑Fi, or tricks like USB/`adb reverse`). **Public users** need a **stable HTTPS URL** on the internet, e.g. `https://your-service.up.railway.app/api`.
+That address only works on **your LAN** (same Wi‑Fi, or tricks like USB/`adb reverse`). **Public users** need a **stable HTTPS URL** on the internet, e.g. `https://cognitive-assessment-system-production.up.railway.app/api`.
 
 ## Final execution checklist (production)
 
@@ -36,11 +36,11 @@ Work through this in order. Play Store is optional for a first pilot.
 ### Test the API (before building the APK)
 
 1. **Health (process is up):**  
-   `https://your-app.up.railway.app/api/cloud/health`  
+   `https://cognitive-assessment-system-production.up.railway.app/api/cloud/health`  
    - Expect JSON including `"status": "ok"`. If this fails, fix deploy before continuing.
 
 2. **Ready (full stack — use this too):**  
-   `https://your-app.up.railway.app/api/cloud/ready`  
+   `https://cognitive-assessment-system-production.up.railway.app/api/cloud/ready`  
    - **`health`** = HTTP server responding.  
    - **`ready`** = DB + models + dataset checks (see `backend/api/cloud_api.py`). HTTP **200** means “ready”; **503** means something is missing (models, dataset path, or DB).  
    - Use **`ready`** to avoid “app talks to API but ML behaves wrong.”
@@ -58,16 +58,16 @@ From **`app/`**, do **not** hardcode the URL for production users. Build with:
 ```bash
 flutter pub get
 flutter build apk --release \
-  --dart-define=API_BASE_URL=https://your-app.up.railway.app/api \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
+  --dart-define=API_BASE_URL=https://cognitive-assessment-system-production.up.railway.app/api \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=994631611469-2kpjm64eifo6gqd9rum9sg5iecjrvr71.apps.googleusercontent.com
 ```
 
 Or use the repository wrapper from the root:
 
 ```bash
 ./scripts/build_release_apk.sh \
-  --api-url=https://your-app.up.railway.app/api \
-  --google-server-client-id=<your-server-client-id>
+  --api-url=https://cognitive-assessment-system-production.up.railway.app/api \
+  --google-server-client-id=994631611469-2kpjm64eifo6gqd9rum9sg5iecjrvr71.apps.googleusercontent.com
 ```
 
 APK output: `app/build/app/outputs/flutter-apk/app-release.apk`.
@@ -147,7 +147,7 @@ Set these in Railway / Railway / Docker / secrets. Values below are typical **pr
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `API_BASE_URL` | Yes for production | Full base URL including **`/api`**, e.g. `https://your-app.up.railway.app/api`. |
+| `API_BASE_URL` | Yes for production | Full base URL including **`/api`**, e.g. `https://cognitive-assessment-system-production.up.railway.app/api`. |
 | `GOOGLE_SERVER_CLIENT_ID` | Yes for Android Google Sign-In | OAuth server client ID required at build time for Android Google login. |
 
 See [infra/.env.example](infra/.env.example) for copy-paste names and comments.
@@ -247,7 +247,7 @@ cd app
 flutter pub get
 flutter build apk --release \
   --dart-define=API_BASE_URL=https://your-api-host.example.com/api \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=994631611469-2kpjm64eifo6gqd9rum9sg5iecjrvr71.apps.googleusercontent.com
 ```
 
 APK output: `app/build/app/outputs/flutter-apk/app-release.apk`.
@@ -258,7 +258,7 @@ APK output: `app/build/app/outputs/flutter-apk/app-release.apk`.
 cd app
 flutter build appbundle --release \
   --dart-define=API_BASE_URL=https://your-api-host.example.com/api \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=994631611469-2kpjm64eifo6gqd9rum9sg5iecjrvr71.apps.googleusercontent.com
 ```
 
 AAB output: `app/build/app/outputs/bundle/release/app-release.aab`.

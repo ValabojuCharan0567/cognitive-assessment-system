@@ -78,7 +78,7 @@ Use the repo wrapper so the Android Google sign-in client ID is always included:
 ```bash
 cd '/Users/charanvalaboju/valaboju charan/Cognitive Assessment System'
 ./scripts/build_release_apk.sh \
-  --api-url=https://your-app.up.railway.app/api \
+  --api-url=https://cognitive-assessment-system-production.up.railway.app/api \
   --google-server-client-id=994631611469-h0rrsme268j2f4h5t92kbpdb3hc75n34.apps.googleusercontent.com
 ```
 
