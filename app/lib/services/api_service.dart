@@ -236,7 +236,7 @@ class ApiService {
     final reqId = _requestId('audio-$childId', requestId);
 
     // Optional warmup without blocking the request.
-    unawaited(checkHealth());
+    checkHealth();
 
     final url = '$baseUrl/audio/analyze';
     final formData = FormData.fromMap({
