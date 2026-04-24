@@ -220,13 +220,34 @@ class ApiService {
         },
         sendTimeout: _heavyRequestTimeout,
         receiveTimeout: _heavyRequestTimeout,
+        validateStatus: (_) => true,
       ),
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return Map<String, dynamic>.from(response.data as Map);
     }
-    throw Exception('Failed to analyze audio: ${response.data}');
+
+    final statusCode = response.statusCode ?? 0;
+    final statusMessage = response.statusMessage?.trim();
+    var message = 'Server error';
+
+    if (response.data is Map<String, dynamic>) {
+      final data = response.data as Map<String, dynamic>;
+      message = data['message']?.toString() ??
+          data['error']?.toString() ??
+          message;
+    } else if (response.data is String && response.data.toString().trim().isNotEmpty) {
+      message = response.data.toString().trim();
+    } else if (statusMessage?.isNotEmpty == true) {
+      message = statusMessage!;
+    }
+
+    if (statusCode == 502) {
+      message = 'Server temporarily unavailable. Please try again in a moment.';
+    }
+
+    throw Exception('Audio analysis failed ($statusCode): $message');
   }
 
   // Analyze EEG

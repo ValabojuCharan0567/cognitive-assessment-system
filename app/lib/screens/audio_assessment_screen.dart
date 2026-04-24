@@ -236,7 +236,12 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
     if (error is DioException) {
       text = extractError(error.response?.data);
       if (text.isEmpty) {
+        final statusCode = error.response?.statusCode;
+        final statusMessage = error.response?.statusMessage;
         text = error.message ?? '';
+        if (statusCode != null) {
+          text = 'Server responded with $statusCode${statusMessage != null ? ': $statusMessage' : ''}';
+        }
       }
     } else {
       text = extractError(error);
