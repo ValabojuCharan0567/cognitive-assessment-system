@@ -21,11 +21,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _error;
   List<dynamic> _children = [];
 
-  bool get _isCurrentRoute {
-    final route = ModalRoute.of(context);
-    return route?.isCurrent ?? false;
-  }
-
   int? _ageFromDob(dynamic dobValue) {
     if (dobValue == null) return null;
     final dobStr = dobValue.toString();

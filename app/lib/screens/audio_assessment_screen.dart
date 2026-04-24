@@ -233,7 +233,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
     }
 
     String text;
-    if (error is DioError) {
+    if (error is DioException) {
       text = extractError(error.response?.data);
       if (text.isEmpty) {
         text = error.message ?? '';
