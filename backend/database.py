@@ -79,6 +79,22 @@ def init_db() -> None:
             )
         """)
 
+        # Lightweight migrations for older children table schemas.
+        cur.execute("PRAGMA table_info(children)")
+        child_cols = {row["name"] for row in cur.fetchall()}
+        if "user_id" not in child_cols:
+            cur.execute("ALTER TABLE children ADD COLUMN user_id INTEGER")
+        if "gender" not in child_cols:
+            cur.execute("ALTER TABLE children ADD COLUMN gender TEXT")
+        if "grade" not in child_cols:
+            cur.execute("ALTER TABLE children ADD COLUMN grade TEXT")
+        if "difficulty_level" not in child_cols:
+            cur.execute("ALTER TABLE children ADD COLUMN difficulty_level INTEGER DEFAULT 1")
+        if "dob" not in child_cols:
+            cur.execute("ALTER TABLE children ADD COLUMN dob TEXT")
+        if "created_at" not in child_cols:
+            cur.execute("ALTER TABLE children ADD COLUMN created_at TIMESTAMP")
+
         cur.execute("""
             CREATE TABLE IF NOT EXISTS assessments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

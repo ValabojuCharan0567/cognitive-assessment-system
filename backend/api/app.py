@@ -955,52 +955,63 @@ def google_login():
 
 @app.route("/api/child", methods=["POST"])
 def create_child():
-    data = request.get_json(force=True)
-    name = data.get("name")
-    age = data.get("age")
-    parent_email = _normalize_email(data.get("parent_email"))
-    if not name or age is None or not parent_email:
-        return jsonify({"error": "name, age and parent_email required"}), 400
+    request_id = _request_id()
+    try:
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"error": "Invalid JSON body.", "request_id": request_id}), 400
 
-    with get_db() as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM users WHERE email = ?", (parent_email,))
-        user_row = cur.fetchone()
-        if not user_row:
-            return jsonify({"error": "Parent account not found"}), 400
-        user_id = user_row["id"]
-        cur.execute(
-            """INSERT INTO children (user_id, name, age, gender, grade, difficulty_level, dob)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (
-                user_id,
-                name,
-                age,
-                data.get("gender"),
-                data.get("grade"),
-                data.get("difficulty_level", 1),
-                data.get("dob"),
-            ),
-        )
-        child_id = cur.lastrowid
+        name = data.get("name")
+        age = data.get("age")
+        parent_email = _normalize_email(data.get("parent_email"))
+        if not name or age is None or not parent_email:
+            return jsonify(
+                {"error": "name, age and parent_email required", "request_id": request_id}
+            ), 400
 
-        cur.execute(
-            "SELECT id, name, age, gender, grade, difficulty_level, dob FROM children WHERE id = ?",
-            (child_id,),
-        )
-        row = cur.fetchone()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM users WHERE email = ?", (parent_email,))
+            user_row = cur.fetchone()
+            if not user_row:
+                return jsonify({"error": "Parent account not found", "request_id": request_id}), 400
+            user_id = user_row["id"]
+            cur.execute(
+                """INSERT INTO children (user_id, name, age, gender, grade, difficulty_level, dob)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    user_id,
+                    name,
+                    age,
+                    data.get("gender"),
+                    data.get("grade"),
+                    data.get("difficulty_level", 1),
+                    data.get("dob"),
+                ),
+            )
+            child_id = cur.lastrowid
 
-    profile = {
-        "id": str(child_id),
-        "name": row["name"],
-        "age": row["age"],
-        "gender": row["gender"],
-        "dob": row["dob"],
-        "parent_email": parent_email,
-        "difficulty_level": row["difficulty_level"] or 1,
-        "created_at": datetime.utcnow().isoformat(),
-    }
-    return jsonify(profile), 201
+            cur.execute(
+                "SELECT id, name, age, gender, grade, difficulty_level, dob FROM children WHERE id = ?",
+                (child_id,),
+            )
+            row = cur.fetchone()
+
+        profile = {
+            "id": str(child_id),
+            "name": row["name"],
+            "age": row["age"],
+            "gender": row["gender"],
+            "dob": row["dob"],
+            "parent_email": parent_email,
+            "difficulty_level": row["difficulty_level"] or 1,
+            "created_at": datetime.utcnow().isoformat(),
+            "request_id": request_id,
+        }
+        return jsonify(profile), 201
+    except Exception as exc:
+        logger.exception("[REQ %s] create_child failed: %s", request_id, exc)
+        return jsonify({"error": "Failed to create child.", "request_id": request_id}), 500
 
 
 @app.route("/api/assessment/start", methods=["POST"])
