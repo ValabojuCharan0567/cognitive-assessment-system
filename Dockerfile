@@ -21,4 +21,6 @@ COPY models /app/models
 COPY data /app/data
 
 WORKDIR /app/backend
-CMD ["gunicorn", "api.app:app", "--bind", "0.0.0.0:$PORT"]
+ENV PORT=8000
+ENTRYPOINT ["sh", "-c"]
+CMD ["gunicorn api.app:app --bind 0.0.0.0:${PORT}"]
