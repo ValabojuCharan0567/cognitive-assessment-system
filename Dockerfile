@@ -22,5 +22,6 @@ COPY data /app/data
 
 WORKDIR /app/backend
 ENV PORT=8000
-ENTRYPOINT ["sh", "-c"]
-CMD ["gunicorn api.app:app --bind 0.0.0.0:${PORT}"]
+ENV DATASET_PATH=/app/data
+ENV PYTHONPATH=/app/backend
+CMD gunicorn api.app:app --bind 0.0.0.0:$PORT
