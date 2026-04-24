@@ -4,6 +4,8 @@
 .env
 **/.env
 !**/.env.example
+scripts/drive_credentials.json
+scripts/drive_token.json
 
 *.log
 *.db

@@ -85,6 +85,8 @@ backend/.venv/bin/python scripts/upload_apk_to_drive.py \
 
 The first run will open a browser for Google OAuth authorization and save the refresh token to `scripts/drive_token.json`.
 
+> Do not commit `scripts/drive_credentials.json` or `scripts/drive_token.json` to git.
+
 ### Fix "HTTPS is required for secure upload" during local Google login
 
 Phones use a **private LAN IP** (for example `192.168.x.x`), not `127.0.0.1`, so the backend may treat them as non-local and require HTTPS.
