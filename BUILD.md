@@ -4,7 +4,7 @@ This complements [README.md](README.md) and [docs/secure_deployment.md](docs/sec
 
 ## Quick start (2-minute overview)
 
-1. Deploy the backend (e.g. **Railway**) using `backend/Dockerfile`.
+1. Deploy the backend (e.g. **Render** or **Railway**) using `backend/Dockerfile`.
 2. Set [environment variables](#environment-variables-reference) in the platform dashboard (especially `GOOGLE_OAUTH_CLIENT_ID`, `DATASET_PATH`, HTTPS flags).
 3. Verify in a browser:
    - `https://YOUR_HOST/api/cloud/health` → **200**, JSON with `"status": "ok"`
@@ -13,7 +13,7 @@ This complements [README.md](README.md) and [docs/secure_deployment.md](docs/sec
    ```bash
    flutter build apk --release \
      --dart-define=API_BASE_URL=https://YOUR_HOST/api \
-     --dart-define=GOOGLE_SERVER_CLIENT_ID=994631611469-2kpjm64eifo6gqd9rum9sg5iecjrvr71.apps.googleusercontent.com
+     --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
    ```
 5. Install the APK (Drive, Telegram, etc.) and test on a device **off your dev Wi‑Fi** if possible.
 
@@ -21,13 +21,13 @@ If something fails → **[Common failures & fixes](#common-failures--fixes)**. F
 
 ## Why `http://192.168.x.x:8000/api` is not enough
 
-That address only works on **your LAN** (same Wi‑Fi, or tricks like USB/`adb reverse`). **Public users** need a **stable HTTPS URL** on the internet, e.g. `https://cognitive-assessment-system-production.up.railway.app/api`.
+That address only works on **your LAN** (same Wi‑Fi, or tricks like USB/`adb reverse`). **Public users** need a **stable HTTPS URL** on the internet, e.g. `https://your-service.onrender.com/api`.
 
 ## Final execution checklist (production)
 
 Work through this in order. Play Store is optional for a first pilot.
 
-### Backend (Railway / Railway / similar)
+### Backend (Render / Railway / similar)
 
 - [ ] Deploy **Flask via Docker** (image built from `backend/Dockerfile`).
 - [ ] Gunicorn WSGI target is **`api.app:app`** (already set in this repo’s Dockerfile).
@@ -36,11 +36,11 @@ Work through this in order. Play Store is optional for a first pilot.
 ### Test the API (before building the APK)
 
 1. **Health (process is up):**  
-   `https://cognitive-assessment-system-production.up.railway.app/api/cloud/health`  
+   `https://your-app.onrender.com/api/cloud/health`  
    - Expect JSON including `"status": "ok"`. If this fails, fix deploy before continuing.
 
 2. **Ready (full stack — use this too):**  
-   `https://cognitive-assessment-system-production.up.railway.app/api/cloud/ready`  
+   `https://your-app.onrender.com/api/cloud/ready`  
    - **`health`** = HTTP server responding.  
    - **`ready`** = DB + models + dataset checks (see `backend/api/cloud_api.py`). HTTP **200** means “ready”; **503** means something is missing (models, dataset path, or DB).  
    - Use **`ready`** to avoid “app talks to API but ML behaves wrong.”
@@ -58,16 +58,16 @@ From **`app/`**, do **not** hardcode the URL for production users. Build with:
 ```bash
 flutter pub get
 flutter build apk --release \
-  --dart-define=API_BASE_URL=https://cognitive-assessment-system-production.up.railway.app/api \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=994631611469-2kpjm64eifo6gqd9rum9sg5iecjrvr71.apps.googleusercontent.com
+  --dart-define=API_BASE_URL=https://your-app.onrender.com/api \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
 ```
 
 Or use the repository wrapper from the root:
 
 ```bash
 ./scripts/build_release_apk.sh \
-  --api-url=https://cognitive-assessment-system-production.up.railway.app/api \
-  --google-server-client-id=994631611469-2kpjm64eifo6gqd9rum9sg5iecjrvr71.apps.googleusercontent.com
+  --api-url=https://your-app.onrender.com/api \
+  --google-server-client-id=<your-server-client-id>
 ```
 
 APK output: `app/build/app/outputs/flutter-apk/app-release.apk`.
@@ -99,7 +99,7 @@ Use both: **health** first, **ready** before you declare “backend is productio
 
 SQLite file: **`database.db`** at project root in the container (`/workspace/database.db`).
 
-On **Railway** (and similar), filesystems are often **ephemeral** — redeploys can wipe data unless you:
+On **Render** (and similar), filesystems are often **ephemeral** — redeploys can wipe data unless you:
 
 - Attach a **persistent disk** and mount it where `database.db` lives, **or**
 - Move to a managed DB (e.g. Postgres) later.
@@ -113,7 +113,7 @@ Without persistence, user accounts and reports can **reset** after a deploy.
 ```text
 Flutter APK
      ↓  HTTPS
-Public API (e.g. Railway)
+Public API (e.g. Render)
      ↓
 Flask + Gunicorn
      ↓
@@ -128,7 +128,7 @@ Most issues become **deployment**: wrong env vars, missing files/volumes, OAuth 
 
 ## Environment variables (reference)
 
-Set these in Railway / Railway / Docker / secrets. Values below are typical **production** choices.
+Set these in Render / Railway / Docker / secrets. Values below are typical **production** choices.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -136,7 +136,7 @@ Set these in Railway / Railway / Docker / secrets. Values below are typical **pr
 | `FLASK_DEBUG` | Yes | Use **`0`** in production (no debugger / safer). |
 | `FLASK_SSL_ADHOC` | Yes | Use **`0`** in production; TLS is handled by the platform or reverse proxy. |
 | `GOOGLE_OAUTH_CLIENT_ID` | Yes if using Google login | **Web** OAuth client ID; backend uses it to verify Google `id_token` audience. |
-| `DATASET_PATH` | Yes for full ML | Path **inside** the container to dataset root (`EEG/`, `speech_data/`). **Dockerfile default:** `/workspace/data` (copied from repo `data/`). Override on Railway only if you use another layout. |
+| `DATASET_PATH` | Yes for full ML | Path **inside** the container to dataset root (`EEG/`, `speech_data/`). **Dockerfile default:** `/workspace/data` (copied from repo `data/`). Override on Render only if you use another layout. |
 | `REQUIRE_HTTPS_UPLOADS` | Yes | Set **`1`** so non-local clients must use HTTPS for uploads. |
 | `ALLOW_HTTP_PRIVATE_LAN` | Yes | Set **`0`** on the public internet (do not treat RFC1918 LAN as exempt). |
 | `GUNICORN_WORKERS` | No | Default is fine; increase under load. |
@@ -147,7 +147,7 @@ Set these in Railway / Railway / Docker / secrets. Values below are typical **pr
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `API_BASE_URL` | Yes for production | Full base URL including **`/api`**, e.g. `https://cognitive-assessment-system-production.up.railway.app/api`. |
+| `API_BASE_URL` | Yes for production | Full base URL including **`/api`**, e.g. `https://your-app.onrender.com/api`. |
 | `GOOGLE_SERVER_CLIENT_ID` | Yes for Android Google Sign-In | OAuth server client ID required at build time for Android Google login. |
 
 See [infra/.env.example](infra/.env.example) for copy-paste names and comments.
@@ -168,7 +168,7 @@ Use this as the **final validation gate** before you call the rollout “done”
 ### Backend container exits or will not start
 
 - Confirm Gunicorn module is **`api.app:app`** (this repo’s `backend/Dockerfile`).
-- Check **build logs** and **runtime logs** in the platform dashboard (Railway → Logs).
+- Check **build logs** and **runtime logs** in the platform dashboard (Render → Logs).
 - Verify `PORT` matches what the platform expects (some set `PORT` automatically).
 
 ### `/api/cloud/health` works but `/api/cloud/ready` returns 503
@@ -185,8 +185,8 @@ Use this as the **final validation gate** before you call the rollout “done”
 ### Audio / EEG: `ClientConnection closed while receiving data` or timeouts
 
 - **Large/slow ML:** `/audio/analyze` sends big JSON + runs librosa on the server; the connection can drop if the worker is killed (**OOM**) or times out.
-- **Railway free (512 MB):** use **`GUNICORN_WORKERS=1`** so only one worker loads models (reduces RAM). Optionally raise plan for more CPU/RAM.
-- **Server timeout:** set **`GUNICORN_TIMEOUT=300`** (seconds) in Railway environment variables (matches `backend/gunicorn.conf.py` default after deploy).
+- **Render free (512 MB):** use **`GUNICORN_WORKERS=1`** so only one worker loads models (reduces RAM). Optionally raise plan for more CPU/RAM.
+- **Server timeout:** set **`GUNICORN_TIMEOUT=300`** (seconds) in Render environment variables (matches `backend/gunicorn.conf.py` default after deploy).
 - **Cold start:** open **`/api/cloud/health`** once, wait ~30s, then try analysis again.
 - **App:** release builds use a **5-minute** client timeout for heavy `POST`s (`app/lib/services/api_service.dart`); rebuild the APK after pulling latest.
 
@@ -198,7 +198,7 @@ Use this as the **final validation gate** before you call the rollout “done”
 
 ## Backend (Docker)
 
-### Bundled dataset (full ML on Railway)
+### Bundled dataset (full ML on Render)
 
 The image includes **`COPY data /workspace/data`** and **`DATASET_PATH=/workspace/data`**. Commit your **`data/EEG/`** and **`data/speech_data/`** files under the [rules in `data/README.md`](data/README.md) (watch GitHub file size limits). For large corpora, use disk/LFS/storage instead.
 
@@ -247,7 +247,7 @@ cd app
 flutter pub get
 flutter build apk --release \
   --dart-define=API_BASE_URL=https://your-api-host.example.com/api \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=994631611469-2kpjm64eifo6gqd9rum9sg5iecjrvr71.apps.googleusercontent.com
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
 ```
 
 APK output: `app/build/app/outputs/flutter-apk/app-release.apk`.
@@ -258,7 +258,7 @@ APK output: `app/build/app/outputs/flutter-apk/app-release.apk`.
 cd app
 flutter build appbundle --release \
   --dart-define=API_BASE_URL=https://your-api-host.example.com/api \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=994631611469-2kpjm64eifo6gqd9rum9sg5iecjrvr71.apps.googleusercontent.com
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
 ```
 
 AAB output: `app/build/app/outputs/bundle/release/app-release.aab`.
