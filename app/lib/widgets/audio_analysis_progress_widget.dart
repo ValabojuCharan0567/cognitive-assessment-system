@@ -25,8 +25,8 @@ class AudioAnalysisProgressWidget extends StatefulWidget {
     this.customMessage,
     this.onCancel,
     this.isCached = false,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<AudioAnalysisProgressWidget> createState() =>
@@ -103,7 +103,6 @@ class _AudioAnalysisProgressWidgetState
       case AudioAnalysisStage.cached:
         return '⚡';
       case AudioAnalysisStage.idle:
-      default:
         return '';
     }
   }
@@ -127,7 +126,6 @@ class _AudioAnalysisProgressWidgetState
       case AudioAnalysisStage.cached:
         return 'Loading cached result...';
       case AudioAnalysisStage.idle:
-      default:
         return '';
     }
   }

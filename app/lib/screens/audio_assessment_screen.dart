@@ -165,7 +165,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
   // For recording timer
   Timer? _recordTimer;
   int _recordSeconds = 0;
-  int _retryCount = 0;
   final _api = ApiService();
   final AudioService _audioService = AudioService();
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -190,7 +189,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
   CancelToken? _audioUploadCancelToken;
   AudioPhase _phase = AudioPhase.idle;
   AudioAnalysisStage _stage = AudioAnalysisStage.idle;
-  String? _activeRequestId;
   String? _selectedAudioFingerprint;
   String? _lastAnalyzedFingerprint;
   DateTime? _lastAnalysisAttemptAt;
@@ -260,29 +258,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       text = text.substring(prefix.length).trim();
     }
     return text.isEmpty ? 'Something went wrong. Please try again.' : text;
-  }
-
-  String get _statusText {
-    if (_uploadStatus != null && _uploadStatus!.isNotEmpty) {
-      return _uploadStatus!;
-    }
-
-    switch (_phase) {
-      case AudioPhase.uploading:
-        final progress = _uploadProgress;
-        if (progress != null) {
-          return 'Uploading audio... ${(100 * progress).toStringAsFixed(0)}%';
-        }
-        return 'Uploading audio...';
-      case AudioPhase.analyzing:
-        return 'Analyzing audio...';
-      case AudioPhase.done:
-        return 'Analysis complete';
-      case AudioPhase.error:
-        return 'Something went wrong';
-      case AudioPhase.idle:
-        return '';
-    }
   }
 
   String _buildRequestId(String childId) {
@@ -507,9 +482,7 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
     _analysisInFlight = true;
     _lastAnalysisAttemptAt = DateTime.now();
     _audioUploadCancelToken = CancelToken();
-    _retryCount = 0;
     final requestId = _buildRequestId(childId);
-    _activeRequestId = requestId;
 
     debugPrint(
         '[AUDIO] Running analysis requestId=$requestId childId=$childId, bytes=${_audioBytes?.length}');
@@ -609,7 +582,6 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
       });
     } finally {
       _audioUploadCancelToken = null;
-      _activeRequestId = null;
       _analysisInFlight = false;
       if (mounted) {
         setState(() {
