@@ -72,6 +72,19 @@ bash scripts/run_local_dev.sh android
 
 If you use `scripts/autorun_app.sh`, it also forwards these values.
 
+### Upload release APK to Google Drive
+After building the release APK, use the Drive API helper script to upload it to your Drive folder:
+
+```bash
+cd '/Users/charanvalaboju/valaboju charan/Cognitive Assessment System'
+backend/.venv/bin/python scripts/upload_apk_to_drive.py \
+  --file app/build/app/outputs/flutter-apk/app-release.apk \
+  --folder-id 1vWM3TgVsPXf7sFyvdHSwyvyMZKewSYox \
+  --credentials scripts/drive_credentials.json
+```
+
+The first run will open a browser for Google OAuth authorization and save the refresh token to `scripts/drive_token.json`.
+
 ### Fix "HTTPS is required for secure upload" during local Google login
 
 Phones use a **private LAN IP** (for example `192.168.x.x`), not `127.0.0.1`, so the backend may treat them as non-local and require HTTPS.
