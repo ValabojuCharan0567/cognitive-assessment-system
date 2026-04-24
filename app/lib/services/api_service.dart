@@ -347,14 +347,34 @@ class ApiService {
   // Get children for parent
   Future<List<dynamic>> getChildrenForParent(String email) async {
     final encodedEmail = Uri.encodeComponent(email.trim());
-    final url = Uri.parse("$baseUrl/children/by_parent/$encodedEmail");
-    final response = await http.get(url);
+    final normalizedBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+    final looksApiPrefixed = normalizedBase.endsWith('/api');
+    final baseHost = looksApiPrefixed
+        ? normalizedBase.substring(0, normalizedBase.length - 4)
+        : normalizedBase;
+    final candidates = <String>[
+      '$normalizedBase/children/by_parent/$encodedEmail',
+      '$normalizedBase/children/by_parent?email=$encodedEmail',
+      '$baseHost/api/children/by_parent/$encodedEmail',
+      '$baseHost/api/children/by_parent?email=$encodedEmail',
+      '$baseHost/children/by_parent/$encodedEmail',
+      '$baseHost/children/by_parent?email=$encodedEmail',
+    ];
 
-    if (response.statusCode == 200) {
-      return List<dynamic>.from(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to get children: ${response.body}');
+    http.Response? lastResponse;
+    for (final endpoint in candidates.toSet()) {
+      final response = await http.get(Uri.parse(endpoint));
+      lastResponse = response;
+      if (response.statusCode == 200) {
+        return List<dynamic>.from(jsonDecode(response.body));
+      }
+      if (response.statusCode != 404) {
+        throw Exception('Failed to get children: ${response.body}');
+      }
     }
+    throw Exception(
+      'Failed to get children: ${lastResponse?.body ?? "No response from server"}',
+    );
   }
 
   // Get reports
