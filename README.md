@@ -72,6 +72,18 @@ bash scripts/run_local_dev.sh android
 
 If you use `scripts/autorun_app.sh`, it also forwards these values.
 
+### Build the release APK with Google sign-in
+Use the repo wrapper so the Android Google sign-in client ID is always included:
+
+```bash
+cd '/Users/charanvalaboju/valaboju charan/Cognitive Assessment System'
+./scripts/build_release_apk.sh \
+  --api-url=https://your-app.onrender.com/api \
+  --google-server-client-id=994631611469-h0rrsme268j2f4h5t92kbpdb3hc75n34.apps.googleusercontent.com
+```
+
+If you have a local `.env`, the script will also read `API_BASE_URL` and `GOOGLE_SERVER_CLIENT_ID` from it.
+
 ### Fix "HTTPS is required for secure upload" during local Google login
 
 Phones use a **private LAN IP** (for example `192.168.x.x`), not `127.0.0.1`, so the backend may treat them as non-local and require HTTPS.

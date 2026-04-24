@@ -57,7 +57,16 @@ From **`app/`**, do **not** hardcode the URL for production users. Build with:
 ```bash
 flutter pub get
 flutter build apk --release \
-  --dart-define=API_BASE_URL=https://your-app.onrender.com/api
+  --dart-define=API_BASE_URL=https://your-app.onrender.com/api \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>
+```
+
+Or use the repository wrapper from the root:
+
+```bash
+./scripts/build_release_apk.sh \
+  --api-url=https://your-app.onrender.com/api \
+  --google-server-client-id=<your-server-client-id>
 ```
 
 APK output: `app/build/app/outputs/flutter-apk/app-release.apk`.
