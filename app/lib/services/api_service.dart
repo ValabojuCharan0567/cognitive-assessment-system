@@ -55,6 +55,8 @@ class ApiService {
     switch (statusCode) {
       case 502:
         return 'Server temporarily unavailable. Please try again in a moment.';
+      case 503:
+        return 'Service unavailable. Please try again in a few moments.';
       case 500:
         return 'Server error. Please try again later.';
       case 408:
