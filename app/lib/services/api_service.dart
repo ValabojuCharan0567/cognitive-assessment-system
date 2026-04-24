@@ -27,7 +27,13 @@ class ApiService {
     );
   }
 
-  String get baseUrl => _kBaseUrl;
+  String get baseUrl {
+    final base = _kBaseUrl.endsWith('/') ? _kBaseUrl.substring(0, _kBaseUrl.length - 1) : _kBaseUrl;
+    if (!base.endsWith('/api')) {
+      return '$base/api';
+    }
+    return base;
+  }
 
   String _requestId(String prefix, [String? provided]) {
     final value = (provided ?? '').trim();

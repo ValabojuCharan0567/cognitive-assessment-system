@@ -24,4 +24,6 @@ WORKDIR /app/backend
 ENV PORT=8000
 ENV DATASET_PATH=/app/data
 ENV PYTHONPATH=/app/backend
-CMD gunicorn api.app:app --bind 0.0.0.0:$PORT
+COPY backend/start.sh /app/backend/start.sh
+RUN chmod +x /app/backend/start.sh
+ENTRYPOINT ["sh", "/app/backend/start.sh"]

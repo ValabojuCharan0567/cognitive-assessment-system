@@ -34,6 +34,7 @@ except ImportError:
     pass
 
 from flask import Flask, jsonify, request
+from werkzeug.exceptions import HTTPException
 import certifi
 import requests
 from config import DEMO_MODE, validate_dataset
@@ -266,6 +267,9 @@ def enforce_https_uploads() -> Any:
 @app.errorhandler(Exception)
 def handle_exception(error: Exception) -> tuple[dict, int]:
     """Catch unhandled exceptions and return structured error."""
+    if isinstance(error, HTTPException):
+        return jsonify({"error": error.description, "timestamp": datetime.utcnow().isoformat()}), error.code
+
     logger.exception(f"Unhandled exception: {error}")
     return (
         jsonify(
