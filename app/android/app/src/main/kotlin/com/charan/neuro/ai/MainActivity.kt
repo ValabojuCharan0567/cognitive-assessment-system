@@ -1,4 +1,4 @@
-package com.example.neuro_ai_cognitive_app
+package com.charan.neuro.ai
 
 import io.flutter.embedding.android.FlutterActivity
 

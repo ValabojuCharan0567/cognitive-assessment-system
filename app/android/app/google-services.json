@@ -1,26 +1,44 @@
 {
   "project_info": {
-    "project_number": "432858194573",
-    "project_id": "cognitive-assessment-sys-be0bf",
-    "storage_bucket": "cognitive-assessment-sys-be0bf.firebasestorage.app"
+    "project_number": "452678072149",
+    "project_id": "neuro-app-47c4f",
+    "storage_bucket": "neuro-app-47c4f.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:432858194573:android:9a10346a22b635a3ca38c4",
+        "mobilesdk_app_id": "1:452678072149:android:0c1de47c291ada1b1aa1dc",
         "android_client_info": {
-          "package_name": "com.example.neuro_ai_cognitive_app"
+          "package_name": "com.charan.neuro.ai"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "452678072149-on45i1gbfc8bhdjnfpnde9u0o0b2v0sq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.charan.neuro.ai",
+            "certificate_hash": "6ac6cb44217a325646906645727bd36d292012f9"
+          }
+        },
+        {
+          "client_id": "452678072149-r0p9mug69cna1rkaj7vkj60i21vbmqa4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyB_EZcgXuI0mDH8zH0Kx1cuH-kFG8t-yjw"
+          "current_key": "AIzaSyAwKcKmWiNXcelY_aGElZnl2FWc--KqKmQ"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "452678072149-r0p9mug69cna1rkaj7vkj60i21vbmqa4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
