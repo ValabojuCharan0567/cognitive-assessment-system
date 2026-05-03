@@ -16,6 +16,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report, mean_squared_error
+from sklearn.utils.class_weight import compute_class_weight
 
 try:
     from sklearn.metrics import root_mean_squared_error
@@ -88,6 +89,19 @@ def main() -> int:
     X_train_s = scaler.fit_transform(X_train)
     X_test_s = scaler.transform(X_test)
 
+    # Compute class weights to handle imbalance (Low=14%, Medium=28%, High=57%)
+    class_weights = compute_class_weight(
+        "balanced",
+        classes=np.unique(yc_train),
+        y=yc_train,
+    )
+    sample_weights = class_weights[yc_train]
+    
+    print(f"=== Class weights (handling imbalance) ===")
+    print(f"Class 0 (Low):    {class_weights[0]:.3f}")
+    print(f"Class 1 (Medium): {class_weights[1]:.3f}")
+    print(f"Class 2 (High):   {class_weights[2]:.3f}")
+
     clf = XGBClassifier(
         n_estimators=200,
         max_depth=6,
@@ -99,8 +113,9 @@ def main() -> int:
         eval_metric="mlogloss",
         random_state=args.seed,
         n_jobs=-1,
+        scale_pos_weight=1.0,  # XGBoost applies class weights automatically with sample_weight
     )
-    clf.fit(X_train_s, yc_train)
+    clf.fit(X_train_s, yc_train, sample_weight=sample_weights)
     y_pred = clf.predict(X_test_s)
     print("=== EEG classifier (holdout) ===")
     print(classification_report(yc_test, y_pred, digits=3))

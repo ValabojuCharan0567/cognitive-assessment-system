@@ -20,6 +20,7 @@ import pandas as pd
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.utils.class_weight import compute_class_weight
 from xgboost import XGBClassifier
 
 
@@ -112,6 +113,19 @@ def main() -> int:
     X_train_s = scaler.fit_transform(X_train)
     X_test_s = scaler.transform(X_test)
 
+    # Compute class weights to handle imbalance
+    class_weights = compute_class_weight(
+        "balanced",
+        classes=np.unique(y_train),
+        y=y_train,
+    )
+    sample_weights = class_weights[y_train]
+    
+    print(f"=== Class weights (handling imbalance) ===")
+    print(f"Class 0 (Low):    {class_weights[0]:.3f}")
+    print(f"Class 1 (Medium): {class_weights[1]:.3f}")
+    print(f"Class 2 (High):   {class_weights[2]:.3f}")
+
     model = XGBClassifier(
         n_estimators=250,
         max_depth=6,
@@ -123,8 +137,9 @@ def main() -> int:
         eval_metric="mlogloss",
         random_state=args.seed,
         n_jobs=-1,
+        scale_pos_weight=1.0,
     )
-    model.fit(X_train_s, y_train)
+    model.fit(X_train_s, y_train, sample_weight=sample_weights)
     y_pred = model.predict(X_test_s)
     print("=== Audio classifier (holdout) ===")
     print(classification_report(y_test, y_pred, digits=3))

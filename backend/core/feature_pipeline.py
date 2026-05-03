@@ -397,7 +397,6 @@ def _generate_dynamic_confidence_hint(
     # Extract relevant features
     rms_mean = _get_feature_value(feats, 'rms_mean', 0.05)
     spectral_centroid = _get_feature_value(feats, 'spectral_centroid_mean', 2000.0)
-    zcr_mean = _get_feature_value(feats, 'zcr_mean', 0.08)
     zcr_std = _get_feature_value(feats, 'zcr_std', 0.02)
     
     # ====================================================================
