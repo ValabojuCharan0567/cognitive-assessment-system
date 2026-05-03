@@ -23,7 +23,7 @@ class _EdfPreviewScreenState extends State<EdfPreviewScreen> {
     try {
       final filtered = await FilePicker.pickFiles(
         type: FileType.any,
-        allowedExtensions: ['edf', 'csv'],
+        allowedExtensions: null,
         withData: true,
       );
       if (filtered != null && filtered.files.isNotEmpty) {

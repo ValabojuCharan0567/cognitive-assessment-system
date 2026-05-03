@@ -81,7 +81,7 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
     try {
       final filtered = await FilePicker.pickFiles(
         type: FileType.any,
-        allowedExtensions: ['edf'],
+        allowedExtensions: null,
         withData: true,
       );
       if (filtered != null && filtered.files.isNotEmpty) {
