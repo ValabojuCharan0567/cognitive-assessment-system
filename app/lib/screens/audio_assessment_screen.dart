@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show File;
+import 'dart:io' show File, Directory;
 import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
@@ -294,7 +294,8 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
     try {
       await _audioPlayer.stop();
 
-      final tempFile = File('\${Directory.systemTemp.path}/playback_audio.\$ext');
+      final ext = _audioExt ?? 'wav';
+      final tempFile = File('${Directory.systemTemp.path}/playback_audio.$ext');
       await tempFile.writeAsBytes(_audioBytes!, flush: true);
       await _audioPlayer.play(DeviceFileSource(tempFile.path));
       if (await tempFile.exists()) {

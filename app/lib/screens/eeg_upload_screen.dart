@@ -657,7 +657,7 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
             const SizedBox(height: 16),
             if (_loading) ...[
               AudioAnalysisProgressWidget(
-                stage: AudioAnalysisStage.values[_stage.index],
+                stage: AudioAnalysisStage.values.where((e) => e.name == _stage.name).first,
                 customMessage: _stage == EEGAnalysisStage.uploading 
                   ? 'Uploading EEG file...' 
                   : _stage == EEGAnalysisStage.analyzing 
