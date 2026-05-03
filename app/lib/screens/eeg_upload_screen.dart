@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 
 import '../services/api_service.dart';
 import '../theme/app_design.dart';
+import '../widgets/audio_analysis_progress_widget.dart';
 import 'audio_assessment_screen.dart';
 
 Map<String, dynamic> _buildEegPayloadInBackground(Map<String, dynamic> args) {
@@ -70,9 +71,19 @@ class EEGUploadScreen extends StatefulWidget {
   State<EEGUploadScreen> createState() => _EEGUploadScreenState();
 }
 
+
+enum EEGAnalysisStage {
+  idle,
+  uploading,
+  analyzing,
+  done,
+  error,
+}
+
 class _EEGUploadScreenState extends State<EEGUploadScreen> {
   String? _fileName;
   bool _loading = false;
+  EEGAnalysisStage _stage = EEGAnalysisStage.idle;
   String? _error;
   Map<String, dynamic>? _eegFeatures;
   bool _isPickingFile = false;
@@ -142,7 +153,8 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
         setState(() {
           _fileName = name;
           _error = 'Please select a valid .edf EEG file.';
-          _loading = false;
+          _stage = EEGAnalysisStage.done;
+        _loading = false;
         });
         return;
       }
@@ -182,7 +194,8 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _loading = false;
+          _stage = EEGAnalysisStage.done;
+        _loading = false;
           _isPickingFile = false;
         });
       }
@@ -223,6 +236,8 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
       'heart_rate_variability': 'Heart-rate variability',
       'confidence': 'Confidence',
     };
+
+      setState(() => _stage = EEGAnalysisStage.analyzing);
     final normalized = key.toLowerCase();
     if (labels.containsKey(normalized)) {
       return labels[normalized]!;
@@ -640,11 +655,16 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
               child: const Text('Pick EEG File and Analyze'),
             ),
             const SizedBox(height: 16),
-            if (_loading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: CircularProgressIndicator(),
+            if (_loading) ...[
+              AudioAnalysisProgressWidget(
+                stage: AudioAnalysisStage.values[_stage.index],
+                customMessage: _stage == EEGAnalysisStage.uploading 
+                  ? 'Uploading EEG file...' 
+                  : _stage == EEGAnalysisStage.analyzing 
+                  ? 'Analyzing EEG data...' 
+                  : 'Processing...',
               ),
+            ],
             if (_error != null) ...[
               const SizedBox(height: 8),
               Container(
