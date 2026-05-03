@@ -43,6 +43,7 @@ class _PreAssessmentScreenState extends State<PreAssessmentScreen> {
   late final List<TaskType> _taskPlan = _buildTaskPlan();
 
   int _taskIndex = 0;
+  bool _isSubmitting = false; // Prevent duplicate submissions
   GeneratedTask? _currentTask;
   bool _memoryShowingSequence = false;
   DateTime? _questionStart;
@@ -228,7 +229,10 @@ class _PreAssessmentScreenState extends State<PreAssessmentScreen> {
   }
 
   Future<void> _submitAll(Map args) async {
-    setState(() {});
+    // Prevent duplicate submissions
+    if (_isSubmitting) return;
+    
+    setState(() => _isSubmitting = true);
     var childId = args['childId'] as String?;
     // Auto-generate test ID if not provided (for testing/demo mode)
     if (childId == null || childId.isEmpty) {
@@ -299,6 +303,7 @@ class _PreAssessmentScreenState extends State<PreAssessmentScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Analysis failed: $e')),
       );
