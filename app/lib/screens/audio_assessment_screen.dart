@@ -6,12 +6,11 @@ import 'dart:math' as math;
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
-import '../services/audio_service_mobile.dart'
-    if (dart.library.html) '../services/audio_service_web.dart';
+import '../services/audio_service_mobile.dart';
 
 import '../services/audio_compressor.dart';
 import '../services/api_service.dart';
@@ -295,16 +294,12 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
     try {
       await _audioPlayer.stop();
 
-      if (kIsWeb) {
-        await _audioPlayer.play(BytesSource(_audioBytes!));
-      } else {
-        final ext = _audioExt ?? 'wav';
-        final tempFile = File('${Directory.systemTemp.path}/playback_audio.$ext');
-        await tempFile.writeAsBytes(_audioBytes!, flush: true);
-        await _audioPlayer.play(DeviceFileSource(tempFile.path));
-        if (await tempFile.exists()) {
-          await tempFile.delete();
-        }
+      final ext = _audioExt ?? 'wav';
+      final tempFile = File('\${Directory.systemTemp.path}/playback_audio.\$ext');
+      await tempFile.writeAsBytes(_audioBytes!, flush: true);
+      await _audioPlayer.play(DeviceFileSource(tempFile.path));
+      if (await tempFile.exists()) {
+        await tempFile.delete();
       }
     } catch (e) {
       debugPrint('[AUDIO] Play failed: $e');
@@ -374,18 +369,17 @@ class _AudioAssessmentScreenState extends State<AudioAssessmentScreen> {
     });
     try {
       final result = await FilePicker.pickFiles(
-        type: kIsWeb ? FileType.custom : FileType.audio,
-        allowedExtensions: kIsWeb ? ['m4a', 'mp3', 'wav', 'webm'] : null,
+        type: FileType.audio,
         withData: true,
       );
 
       if (result != null && result.files.isNotEmpty) {
         final picked = result.files.single;
-        final path = kIsWeb ? null : picked.path;
+        final path = picked.path;
         final bytes = picked.bytes;
         final ext =
             (picked.extension ?? picked.name.split('.').last).toLowerCase();
-        const allowed = ['wav', 'mp3', 'm4a', 'webm'];
+        const allowed = ['wav', 'mp3', 'm4a'];
         if (!allowed.contains(ext)) {
           setState(() {
             _error =

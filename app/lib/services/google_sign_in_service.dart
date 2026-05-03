@@ -1,13 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleSignInService {
   GoogleSignInService._();
-
-  static const String _webClientId = String.fromEnvironment(
-    'GOOGLE_WEB_CLIENT_ID',
-    defaultValue: '',
-  );
 
   static const String _serverClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
@@ -18,18 +12,12 @@ class GoogleSignInService {
 
   static GoogleSignIn get instance => GoogleSignIn.instance;
 
-  static String get webClientId => _webClientId;
-
   static String get serverClientId => _serverClientId;
-
-  static bool get _requiresServerClientId {
-    return !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-  }
 
   static Future<void> ensureInitialized() async {
     if (_initialized) return;
 
-    if (_requiresServerClientId && _serverClientId.trim().isEmpty) {
+    if (_serverClientId.trim().isEmpty) {
       throw Exception(
         'Android Google sign-in requires `GOOGLE_SERVER_CLIENT_ID` build-time config.\n'
         'Run the app with `--dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>`.',
@@ -37,11 +25,7 @@ class GoogleSignInService {
     }
 
     await instance.initialize(
-      clientId:
-          (kIsWeb && _webClientId.trim().isNotEmpty) ? _webClientId.trim() : null,
-      serverClientId: _serverClientId.trim().isNotEmpty
-          ? _serverClientId.trim()
-          : null,
+      serverClientId: _serverClientId.trim(),
     );
     _initialized = true;
   }

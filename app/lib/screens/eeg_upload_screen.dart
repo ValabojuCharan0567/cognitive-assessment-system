@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../services/api_service.dart';
@@ -80,8 +80,8 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
   Future<FilePickerResult?> _pickEegFile() async {
     try {
       final filtered = await FilePicker.pickFiles(
-        type: kIsWeb ? FileType.custom : FileType.any,
-        allowedExtensions: kIsWeb ? ['edf'] : null,
+        type: FileType.any,
+        allowedExtensions: ['edf'],
         withData: true,
       );
       if (filtered != null && filtered.files.isNotEmpty) {
@@ -135,7 +135,7 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
       }
 
       final picked = result.files.single;
-      final path = kIsWeb ? null : picked.path;
+      final path = picked.path;
       final name = picked.name;
       final ext = (picked.extension ?? name.split('.').last).toLowerCase();
       if (ext != 'edf') {
@@ -153,8 +153,7 @@ class _EEGUploadScreenState extends State<EEGUploadScreen> {
         _eegFeatures = null;
       });
 
-      final bytes = picked.bytes ??
-          (!kIsWeb && path != null ? await File(path).readAsBytes() : null);
+      final bytes = picked.bytes ?? (path != null ? await File(path).readAsBytes() : null);
       if (bytes == null) {
         throw Exception(
             'Could not read selected file bytes. Try picking a local file.');

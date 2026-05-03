@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
-import 'audio_compressor_mobile.dart'
-    if (dart.library.html) 'audio_compressor_web.dart' as impl;
+import 'audio_compressor_mobile.dart' as impl;
 
 class CompressedAudioPayload {
   const CompressedAudioPayload({
@@ -23,4 +22,3 @@ class AudioCompressor {
     return impl.compressForUpload(bytes, inputExt: inputExt);
   }
 }
-

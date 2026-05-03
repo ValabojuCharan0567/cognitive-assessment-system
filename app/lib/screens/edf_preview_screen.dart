@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/api_service.dart';
@@ -23,8 +22,8 @@ class _EdfPreviewScreenState extends State<EdfPreviewScreen> {
   Future<FilePickerResult?> _pickEegFile() async {
     try {
       final filtered = await FilePicker.pickFiles(
-        type: kIsWeb ? FileType.custom : FileType.any,
-        allowedExtensions: kIsWeb ? ['edf', 'csv'] : null,
+        type: FileType.any,
+        allowedExtensions: ['edf', 'csv'],
         withData: true,
       );
       if (filtered != null && filtered.files.isNotEmpty) {
@@ -42,7 +41,7 @@ class _EdfPreviewScreenState extends State<EdfPreviewScreen> {
 
     if (result != null && result.files.isNotEmpty) {
       final picked = result.files.single;
-      final path = kIsWeb ? null : picked.path;
+      final path = picked.path;
       final name = picked.name;
       final ext = (picked.extension ?? name.split('.').last).toLowerCase();
 
@@ -63,7 +62,7 @@ class _EdfPreviewScreenState extends State<EdfPreviewScreen> {
 
       try {
         final bytes = picked.bytes ??
-            (!kIsWeb && path != null ? await File(path).readAsBytes() : null);
+            await File(path).readAsBytes();
         if (bytes == null) {
           throw Exception('Could not read selected file bytes. Try picking a local file.');
         }

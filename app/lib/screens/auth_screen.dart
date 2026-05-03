@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
 import '../services/google_sign_in_service.dart';
 import '../services/session_service.dart';
@@ -110,9 +109,6 @@ class _AuthScreenState extends State<AuthScreen> {
       if (details.contains('fedcm') ||
           details.contains('identitycredential') ||
           details.contains('origin') && details.contains('not allowed')) {
-        return 'Google sign-in was blocked by the browser FedCM flow.\n\n'
-            'For Flutter web, add your local origin (for example `http://localhost:<port>` and `http://127.0.0.1:<port>`) to the Google OAuth web client and run the app with:\n'
-            '`--dart-define=GOOGLE_WEB_CLIENT_ID=<your-web-client-id>`';
       }
       if (details.contains('popup_closed') || details.contains('popup closed')) {
         return 'Google sign-in window was closed before completion. Please try again.';
@@ -120,7 +116,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
     final message = error.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
     if (message.toLowerCase().contains('fedcm')) {
-      return 'Google sign-in needs a valid web OAuth client for FedCM. Set `GOOGLE_WEB_CLIENT_ID` and allow your local web origin in Google Cloud Console.';
+      return 'Google sign-in configuration error. Check your GOOGLE_SERVER_CLIENT_ID setup.';
     }
     return message;
   }
@@ -131,13 +127,7 @@ class _AuthScreenState extends State<AuthScreen> {
       _error = null;
     });
     try {
-      if (kIsWeb && GoogleSignInService.webClientId.trim().isEmpty) {
-        throw Exception(
-          'Google web sign-in requires `GOOGLE_WEB_CLIENT_ID` for the FedCM flow.',
-        );
-      }
-
-      if (!kIsWeb && GoogleSignInService.serverClientId.trim().isEmpty) {
+      if (GoogleSignInService.serverClientId.trim().isEmpty) {
         throw Exception(
           'Android Google sign-in requires `GOOGLE_SERVER_CLIENT_ID` at build time.\n'
           'Run with `--dart-define=GOOGLE_SERVER_CLIENT_ID=<your-server-client-id>`.',
