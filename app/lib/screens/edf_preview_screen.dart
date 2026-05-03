@@ -61,8 +61,7 @@ class _EdfPreviewScreenState extends State<EdfPreviewScreen> {
       });
 
       try {
-        final bytes = picked.bytes ??
-            await File(path).readAsBytes();
+        final bytes = picked.bytes ?? (path != null ? await File(path).readAsBytes() : null);
         if (bytes == null) {
           throw Exception('Could not read selected file bytes. Try picking a local file.');
         }
